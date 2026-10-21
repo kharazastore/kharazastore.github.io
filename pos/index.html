@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>خرزه - نقطة البيع</title>
+<style>
+  body { font-family: Tahoma, Arial, sans-serif; background: #faf6f8; margin: 0; padding: 16px; color: #333; font-size: 14px; }
+  h1 { color: #8b2252; margin: 0 0 10px; font-size: 22px; }
+  h2 { color: #8b2252; font-size: 16px; margin: 0 0 10px; }
+  .card { background: #fff; border-radius: 10px; padding: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.08); margin-bottom: 14px; }
+  .row { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-start; }
+  .col { flex: 1; min-width: 300px; }
+  input, select { padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+  input[type=number] { width: 100px; }
+  button { background: #8b2252; color: #fff; border: 0; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; margin: 2px; }
+  button.light { background: #eee; color: #333; }
+  button.danger { background: #c0392b; }
+  button.pay { background: #27ae60; }
+  button.big { padding: 14px; font-size: 18px; width: 100%; margin-top: 8px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 6px; border-bottom: 1px solid #eee; text-align: right; vertical-align: middle; }
+  .muted { color: #888; font-size: 12px; }
+  .tot { font-size: 20px; font-weight: bold; color: #8b2252; margin-top: 6px; }
+  .tabs button { background: #eee; color: #333; }
+  .tabs button.on { background: #8b2252; color: #fff; }
+  .pill { display: inline-block; padding: 4px 10px; border-radius: 12px; background: #eee; margin-left: 6px; }
+  .open { background: #d5f5e3; }
+  .closed { background: #fadbd8; }
+  .result-btn { display: block; width: 100%; text-align: right; background: #f7eef3; color: #333; margin: 3px 0; }
+  .stat { display: inline-block; background: #faf6f8; border-radius: 8px; padding: 10px 14px; margin: 4px; min-width: 130px; }
+  .stat b { display: block; font-size: 18px; color: #8b2252; }
+  #printArea { display: none; }
+  @page { size: 80mm auto; margin: 2mm; }
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { display: block; position: absolute; left: 0; top: 0; width: 72mm; font-family: Arial, sans-serif; font-size: 12px; }
+  }
+  .rc-line { display: flex; justify-content: space-between; }
+  .rc-hr { border-top: 1px dashed #000; margin: 4px 0; }
+</style>
+</head>
+<body>
+<nav class="kh-nav" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px"><a href="../products/" style="background:#8b2252;color:#fff;text-decoration:none;padding:8px 12px;border-radius:6px;font-size:14px;font-family:Tahoma,Arial,sans-serif">المنتجات والباركود</a><a href="../pos/" style="background:#555;color:#fff;text-decoration:none;padding:8px 12px;border-radius:6px;font-size:14px;font-family:Tahoma,Arial,sans-serif">نقطة البيع</a><a href="../suppliers/" style="background:#8b2252;color:#fff;text-decoration:none;padding:8px 12px;border-radius:6px;font-size:14px;font-family:Tahoma,Arial,sans-serif">الموردين</a><a href="../dashboard/" style="background:#8b2252;color:#fff;text-decoration:none;padding:8px 12px;border-radius:6px;font-size:14px;font-family:Tahoma,Arial,sans-serif">لوحة التحكم</a></nav>
+
+<h1>خرزه - نقطة البيع</h1>
+
+<div class="card" id="shiftBar"></div>
+
+<div class="tabs" style="margin-bottom:12px">
+  <button id="tabSale" class="on" onclick="showTab('sale')">البيع</button>
+  <button id="tabDash" class="light" onclick="showTab('dash')">تقرير اليوم</button>
+  <button id="tabCust" class="light" onclick="showTab('cust')">العملاء</button>
+  <button id="tabSet" class="light" onclick="showTab('set')">الإعدادات والكوبونات</button>
+</div>
+
+<!-- ============ SALE TAB ============ -->
+<div id="saleTab">
+  <div class="row">
+    <div class="col">
+      <div class="card">
+        <h2>إضافة منتج</h2>
+        <input id="scan" style="width:100%" placeholder="امسح الباركود، أو اكتب الاسم / الكود ثم Enter">
+        <div id="results" style="margin-top:8px"></div>
+      </div>
+      <div class="card">
+        <h2>السلة</h2>
+        <table>
+          <thead><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>خصم</th><th>الإجمالي</th><th></th></tr></thead>
+          <tbody id="cartBody"></tbody>
+        </table>
+        <p id="cartEmpty" class="muted">السلة فاضية</p>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="card">
+        <h2>خصم على الفاتورة</h2>
+        <select id="invType" onchange="renderTotals()"><option value="percent">%</option><option value="fixed">ج.م</option></select>
+        <input id="invVal" type="number" min="0" step="0.01" value="0" oninput="renderTotals()">
+        <div style="margin-top:10px">
+          <input id="couponCode" placeholder="كود الكوبون">
+          <button class="light" onclick="applyCoupon()">تطبيق</button>
+          <button class="light" onclick="clearCoupon()">إلغاء</button>
+        </div>
+        <div id="couponInfo" class="muted" style="margin-top:4px"></div>
+      </div>
+
+      <div class="card">
+        <h2>الإجمالي</h2>
+        <div>قبل الخصم: <span id="subT">0.00</span></div>
+        <div>الخصم: <span id="discT">0.00</span></div>
+        <div class="tot">المطلوب: <span id="totT">0.00</span> ج.م</div>
+      </div>
+
+      <div class="card">
+        <div style="margin-bottom:10px">العميل (اختياري)<br><select id="custSel" style="width:100%"></select></div>
+        <h2>الدفع</h2>
+        <div class="muted">تقدر تدفع بطريقة واحدة أو تقسّم المبلغ:</div>
+        <div style="margin:6px 0">
+          <button class="light" onclick="payAll('cash')">كله كاش</button>
+          <button class="light" onclick="payAll('insta')">كله انستاباي</button>
+          <button class="light" onclick="payAll('voda')">كله فودافون</button>
+        </div>
+        <table>
+          <tr><td>كاش</td><td><input id="pCash" type="number" min="0" step="0.01" value="0" oninput="renderTotals()"></td><td></td></tr>
+          <tr><td>انستاباي</td><td><input id="pInsta" type="number" min="0" step="0.01" value="0" oninput="renderTotals()"></td><td><input id="rInsta" placeholder="رقم العملية"></td></tr>
+          <tr><td>فودافون كاش</td><td><input id="pVoda" type="number" min="0" step="0.01" value="0" oninput="renderTotals()"></td><td><input id="rVoda" placeholder="رقم العملية"></td></tr>
+        </table>
+        <div id="payInfo" class="muted" style="margin-top:6px"></div>
+        <button class="big pay" onclick="checkout()">تأكيد البيع وطباعة الفاتورة</button>
+        <button class="light" style="width:100%" onclick="reprintLast()">طباعة آخر فاتورة</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ DASHBOARD TAB ============ -->
+<div id="dashTab" style="display:none">
+  <div class="card">
+    <h2>تقرير اليوم</h2>
+    <div id="dashContent"></div>
+  </div>
+</div>
+
+<!-- ============ SETTINGS TAB ============ -->
+<div id="setTab" style="display:none">
+  <div class="row">
+    <div class="col">
+      <div class="card">
+        <h2>الإعدادات</h2>
+        <div style="margin-bottom:8px">اسم المحل (بيظهر في الفاتورة):<br>
+          <input id="setStore" style="width:100%"></div>
+        <div style="margin-bottom:8px">أقصى خصم مسموح للكاشير (%):<br>
+          <input id="setMax" type="number" min="0" step="1" style="width:100%"></div>
+        <div style="margin:12px 0 8px"><b>أرقام الدفع والطلبات</b></div>
+        <div style="margin-bottom:8px">رقم انستاباي<br><input id="setInsta" style="width:100%"></div>
+        <div style="margin-bottom:8px">رقم فودافون كاش<br><input id="setVoda" style="width:100%"></div>
+        <div style="margin-bottom:8px">رقم الواتساب لاستقبال الطلبات (بالكود الدولي بدون +، مثلاً 201111361036)<br><input id="setWa" style="width:100%"></div>
+        <button onclick="saveSettings()">حفظ الإعدادات</button>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card">
+        <h2>الكوبونات</h2>
+        <div>
+          <input id="cCode" placeholder="الكود مثلاً SUMMER10">
+          <select id="cType"><option value="percent">%</option><option value="fixed">ج.م</option></select>
+          <input id="cVal" type="number" min="0" step="0.01" value="10">
+          <button onclick="addCoupon()">إضافة</button>
+        </div>
+        <table style="margin-top:10px">
+          <thead><tr><th>الكود</th><th>الخصم</th><th>الحالة</th><th></th></tr></thead>
+          <tbody id="couponsList"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ CUSTOMERS TAB ============ -->
+<div id="custTab" style="display:none">
+  <div class="row">
+    <div class="col">
+      <div class="card">
+        <h2 id="custFormTitle">إضافة عميل</h2>
+        <div style="margin-bottom:8px">الاسم *<br><input id="cuName" style="width:100%"></div>
+        <div style="margin-bottom:8px">التليفون *<br><input id="cuPhone" style="width:100%" inputmode="tel"></div>
+        <div style="margin-bottom:8px">العنوان<br><input id="cuAddr" style="width:100%"></div>
+        <div style="margin-bottom:8px">ملاحظات<br><input id="cuNote" style="width:100%"></div>
+        <button onclick="saveCustomer()">حفظ العميل</button>
+        <button class="light" onclick="resetCustForm()">مسح</button>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card">
+        <h2>العملاء</h2>
+        <input id="cuSearch" placeholder="ابحث بالاسم أو التليفون" style="width:100%;margin-bottom:8px" oninput="renderCustomers()">
+        <table>
+          <thead><tr><th>الاسم</th><th>التليفون</th><th>عدد الطلبات</th><th>إجمالي الشراء</th><th></th></tr></thead>
+          <tbody id="custRows"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+// ---------- storage ----------
+let products, sales, shifts, shift, coupons, settings, customers;
+let cart = [];
+let appliedCoupon = null;
+let lastSale = null;
+
+function load(k, d) {
+  try { const v = JSON.parse(localStorage.getItem(k)); return v ?? d; } catch (e) { return d; }
+}
+function store(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
+function reload() {
+  products = load('kharaza_products', []);
+  sales    = load('kharaza_sales', []);
+  shifts   = load('kharaza_shifts', []);
+  shift    = load('kharaza_shift', null);
+  coupons  = load('kharaza_coupons', []);
+  customers = load('kharaza_customers', []);
+  settings = load('kharaza_settings', { storeName: 'خرزه - المحل الرئيسي', maxDiscount: 20 });
+}
+
+// ---------- helpers ----------
+function fmt(n) { return (Math.round((n || 0) * 100) / 100).toFixed(2); }
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function sum(arr, f) { return arr.reduce((a, x) => a + f(x), 0); }
+
+// ---------- shift ----------
+function renderShift() {
+  const bar = document.getElementById('shiftBar');
+  if (shift) {
+    bar.innerHTML = `<span class="pill open">الوردية مفتوحة</span>
+      الكاشير: <b>${esc(shift.cashier)}</b> — من ${new Date(shift.openedAt).toLocaleTimeString('ar-EG')}
+      — الكاش الافتتاحي: ${fmt(shift.openingCash)}
+      <button class="danger" onclick="closeShift()">قفل الوردية</button>`;
+  } else {
+    bar.innerHTML = `<span class="pill closed">الوردية مقفولة</span>
+      اسم الكاشير: <input id="cashierName" placeholder="مثلاً أحمد">
+      الكاش الافتتاحي: <input id="openCash" type="number" min="0" step="0.01" value="0">
+      <button onclick="openShift()">فتح الوردية</button>`;
+  }
+}
+
+function openShift() {
+  const cashier = document.getElementById('cashierName').value.trim();
+  if (!cashier) { alert('اكتب اسم الكاشير'); return; }
+  shift = {
+    id: Date.now(),
+    openedAt: new Date().toISOString(),
+    openingCash: parseFloat(document.getElementById('openCash').value) || 0,
+    cashier,
+    storeName: settings.storeName
+  };
+  store('kharaza_shift', shift);
+  renderAll();
+}
+
+function closeShift() {
+  reload();
+  const mine = sales.filter(s => s.shiftId === shift.id);
+  const cashNet = sum(mine, s => s.cashNet);
+  const expected = shift.openingCash + cashNet;
+  const input = prompt('الكاش الفعلي في الدرج:', fmt(expected));
+  if (input === null) return;
+  const counted = parseFloat(input);
+  if (isNaN(counted)) { alert('ادخل رقم صحيح'); return; }
+  const diff = counted - expected;
+  shifts.push({
+    ...shift,
+    closedAt: new Date().toISOString(),
+    salesCount: mine.length,
+    salesTotal: sum(mine, s => s.total),
+    cashNet, expected, counted, diff
+  });
+  store('kharaza_shifts', shifts);
+  localStorage.removeItem('kharaza_shift');
+  shift = null;
+  alert(`تم قفل الوردية.\nالمتوقع في الدرج: ${fmt(expected)}\nالفعلي: ${fmt(counted)}\nالفرق: ${fmt(diff)}`);
+  renderAll();
+}
+
+// ---------- product search & cart ----------
+function matches(q) {
+  return products.filter(p =>
+    [p.name, p.category, p.barcode, p.sku, p.color, p.size].join(' ').toLowerCase().includes(q)
+  ).slice(0, 12);
+}
+
+function showResults() {
+  const q = document.getElementById('scan').value.trim().toLowerCase();
+  const box = document.getElementById('results');
+  if (!q) { box.innerHTML = ''; return; }
+  reload();
+  const list = matches(q);
+  box.innerHTML = list.length
+    ? list.map(p => `<button class="result-btn" onclick="addToCart(${p.id})">
+        ${esc(p.name)} ${esc(p.color)} ${esc(p.size)} — ${fmt(p.price)} ج.م (متاح ${p.qty})</button>`).join('')
+    : '<span class="muted">مفيش نتائج</span>';
+}
+
+document.getElementById('scan').addEventListener('input', showResults);
+document.getElementById('scan').addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const q = e.target.value.trim().toLowerCase();
+  if (!q) return;
+  reload();
+  const exact = products.find(p => p.barcode.toLowerCase() === q || p.sku.toLowerCase() === q);
+  if (exact) { addToCart(exact.id); }
+  else {
+    const m = matches(q);
+    if (m.length === 1) addToCart(m[0].id);
+    else { alert(m.length ? 'في أكتر من نتيجة، اختار من القائمة' : 'المنتج مش موجود'); return; }
+  }
+  e.target.value = '';
+  showResults();
+  e.target.focus();
+});
+
+function addToCart(id) {
+  reload();
+  if (!shift) { alert('افتح الوردية الأول'); return; }
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  let line = cart.find(l => l.id === id);
+  const current = line ? line.qty : 0;
+  if (current + 1 > p.qty) { alert(`المتاح من ${p.name} هو ${p.qty} بس`); return; }
+  if (line) line.qty++;
+  else cart.push({ id: p.id, sku: p.barcode, name: p.name, price: p.price, qty: 1, dType: 'percent', dVal: 0 });
+  renderAll();
+}
+
+function lineTotal(l) {
+  const base = l.price * l.qty;
+  const d = l.dType === 'percent' ? base * (l.dVal || 0) / 100 : (l.dVal || 0);
+  return Math.max(0, base - d);
+}
+
+function renderCart() {
+  document.getElementById('cartBody').innerHTML = cart.map((l, i) => `
+    <tr>
+      <td>${esc(l.name)}<div class="muted">${esc(l.sku)}</div></td>
+      <td>
+        <button class="light" onclick="chgQty(${i},-1)">-</button>
+        ${l.qty}
+        <button class="light" onclick="chgQty(${i},1)">+</button>
+      </td>
+      <td>${fmt(l.price)}</td>
+      <td>
+        <select onchange="setLine(${i},'dType',this.value)">
+          <option value="percent" ${l.dType === 'percent' ? 'selected' : ''}>%</option>
+          <option value="fixed" ${l.dType === 'fixed' ? 'selected' : ''}>ج.م</option>
+        </select>
+        <input type="number" min="0" step="0.01" value="${l.dVal}" style="width:70px" onchange="setLine(${i},'dVal',this.value)">
+      </td>
+      <td>${fmt(lineTotal(l))}</td>
+      <td><button class="danger" onclick="removeLine(${i})">×</button></td>
+    </tr>`).join('');
+  document.getElementById('cartEmpty').style.display = cart.length ? 'none' : 'block';
+}
+
+function chgQty(i, d) {
+  const l = cart[i];
+  const p = products.find(x => x.id === l.id);
+  const nq = l.qty + d;
+  if (nq <= 0) { removeLine(i); return; }
+  if (p && nq > p.qty) { alert(`المتاح ${p.qty} بس`); return; }
+  l.qty = nq;
+  renderAll();
+}
+
+function setLine(i, key, val) {
+  cart[i][key] = key === 'dVal' ? (parseFloat(val) || 0) : val;
+  renderAll();
+}
+
+function removeLine(i) { cart.splice(i, 1); renderAll(); }
+
+// ---------- totals & payment ----------
+function totals() {
+  const sub = sum(cart, lineTotal);
+  const type = document.getElementById('invType').value;
+  const v = parseFloat(document.getElementById('invVal').value) || 0;
+  let d = type === 'percent' ? sub * v / 100 : v;
+  if (appliedCoupon) {
+    d += appliedCoupon.type === 'percent' ? sub * appliedCoupon.value / 100 : appliedCoupon.value;
+  }
+  d = Math.min(sub, Math.max(0, d));
+  return { sub, disc: d, total: sub - d };
+}
+
+function readPay() {
+  return {
+    cash:   parseFloat(document.getElementById('pCash').value) || 0,
+    insta:  parseFloat(document.getElementById('pInsta').value) || 0,
+    voda:   parseFloat(document.getElementById('pVoda').value) || 0,
+    rInsta: document.getElementById('rInsta').value.trim(),
+    rVoda:  document.getElementById('rVoda').value.trim()
+  };
+}
+
+function renderTotals() {
+  const t = totals();
+  document.getElementById('subT').textContent = fmt(t.sub);
+  document.getElementById('discT').textContent = fmt(t.disc);
+  document.getElementById('totT').textContent = fmt(t.total);
+  const p = readPay();
+  const paid = p.cash + p.insta + p.voda;
+  const info = document.getElementById('payInfo');
+  if (paid + 0.001 >= t.total) info.textContent = `المدفوع: ${fmt(paid)} — الباقي للعميل: ${fmt(paid - t.total)}`;
+  else info.textContent = `المدفوع: ${fmt(paid)} — ناقص: ${fmt(t.total - paid)}`;
+}
+
+function payAll(m) {
+  const t = totals().total;
+  document.getElementById('pCash').value  = m === 'cash'  ? fmt(t) : 0;
+  document.getElementById('pInsta').value = m === 'insta' ? fmt(t) : 0;
+  document.getElementById('pVoda').value  = m === 'voda'  ? fmt(t) : 0;
+  renderTotals();
+}
+
+function applyCoupon() {
+  reload();
+  const code = document.getElementById('couponCode').value.trim().toUpperCase();
+  const c = coupons.find(x => x.code.toUpperCase() === code && x.active);
+  if (!c) { alert('الكود غير صالح أو متوقف'); return; }
+  appliedCoupon = c;
+  document.getElementById('couponInfo').textContent =
+    `الكوبون ${c.code}: خصم ${c.type === 'percent' ? c.value + '%' : fmt(c.value) + ' ج.م'}`;
+  renderTotals();
+}
+
+function clearCoupon() {
+  appliedCoupon = null;
+  document.getElementById('couponCode').value = '';
+  document.getElementById('couponInfo').textContent = '';
+  renderTotals();
+}
+
+// ---------- checkout ----------
+function checkout() {
+  reload();
+  if (!shift) { alert('افتح الوردية الأول'); return; }
+  if (!cart.length) { alert('السلة فاضية'); return; }
+
+  for (const l of cart) {
+    const p = products.find(x => x.id === l.id);
+    if (!p || p.qty < l.qty) { alert('الكمية غير متاحة: ' + l.name); return; }
+  }
+
+  const t = totals();
+  const maxD = settings.maxDiscount;
+  const invType = document.getElementById('invType').value;
+  const invPct = invType === 'percent' && (parseFloat(document.getElementById('invVal').value) || 0) > maxD;
+  const lineOver = cart.some(l => l.dType === 'percent' && l.dVal > maxD);
+  if ((invPct || lineOver) && !confirm(`الخصم أعلى من الحد المسموح للكاشير (${maxD}%). تكمل؟`)) return;
+
+  const p = readPay();
+  const paid = p.cash + p.insta + p.voda;
+  if (paid + 0.001 < t.total) { alert('المدفوع أقل من الإجمالي'); return; }
+  if (p.insta > 0 && !p.rInsta) { alert('اكتب رقم عملية انستاباي'); return; }
+  if (p.voda > 0 && !p.rVoda) { alert('اكتب رقم عملية فودافون كاش'); return; }
+
+  const change = Math.round((paid - t.total) * 100) / 100;
+  if (change > p.cash + 0.001) { alert('الباقي بيتدفع كاش بس. زوّد الكاش أو قلل المبلغ الإلكتروني'); return; }
+
+  // deduct stock
+  cart.forEach(l => {
+    const prod = products.find(x => x.id === l.id);
+    prod.qty -= l.qty;
+  });
+  store('kharaza_products', products);
+
+  const sale = {
+    id: Date.now(),
+    shiftId: shift.id,
+    date: new Date().toISOString(),
+    items: cart.map(l => ({
+      sku: l.sku, name: l.name, qty: l.qty, price: l.price,
+      discount: l.dType + ':' + l.dVal, lineTotal: lineTotal(l)
+    })),
+    subtotal: t.sub,
+    invoiceDiscount: t.disc,
+    coupon: appliedCoupon ? appliedCoupon.code : null,
+    total: t.total,
+    payments: { cash: p.cash, instapay: p.insta, vodafone: p.voda },
+    refs: { instapay: p.rInsta, vodafone: p.rVoda },
+    change,
+    cashNet: p.cash - change,
+    customerId: Number(document.getElementById('custSel').value) || null
+  };
+  sales.push(sale);
+  store('kharaza_sales', sales);
+  lastSale = sale;
+
+  printReceipt(sale);
+
+  // reset the sale
+  cart = [];
+  appliedCoupon = null;
+  document.getElementById('couponCode').value = '';
+  document.getElementById('couponInfo').textContent = '';
+  document.getElementById('invVal').value = 0;
+  ['pCash', 'pInsta', 'pVoda'].forEach(id => document.getElementById(id).value = 0);
+  document.getElementById('rInsta').value = '';
+  document.getElementById('rVoda').value = '';
+  document.getElementById('custSel').value = '';
+  renderAll();
+  document.getElementById('scan').focus();
+}
+
+// ---------- receipt ----------
+function printReceipt(s) {
+  const lines = s.items.map(i =>
+    `<div>${esc(i.name)}</div>
+     <div class="rc-line"><span>${i.qty} × ${fmt(i.price)}</span><span>${fmt(i.lineTotal)}</span></div>`
+  ).join('');
+  const pays = [];
+  if (s.payments.cash) pays.push(`<div class="rc-line"><span>كاش</span><span>${fmt(s.payments.cash)}</span></div>`);
+  if (s.payments.instapay) pays.push(`<div class="rc-line"><span>انستاباي (${esc(s.refs.instapay)})</span><span>${fmt(s.payments.instapay)}</span></div>`);
+  if (s.payments.vodafone) pays.push(`<div class="rc-line"><span>فودافون كاش (${esc(s.refs.vodafone)})</span><span>${fmt(s.payments.vodafone)}</span></div>`);
+
+  document.getElementById('printArea').innerHTML = `
+    <div style="text-align:center"><b>${esc(settings.storeName)}</b><br>${new Date(s.date).toLocaleString('ar-EG')}<br>فاتورة #${String(s.id).slice(-6)}</div>
+    <div class="rc-hr"></div>
+    ${lines}
+    <div class="rc-hr"></div>
+    <div class="rc-line"><span>الإجمالي قبل الخصم</span><span>${fmt(s.subtotal)}</span></div>
+    <div class="rc-line"><span>الخصم${s.coupon ? ' (' + esc(s.coupon) + ')' : ''}</span><span>${fmt(s.invoiceDiscount)}</span></div>
+    <div class="rc-line"><b>المطلوب</b><b>${fmt(s.total)}</b></div>
+    <div class="rc-hr"></div>
+    ${pays.join('')}
+    <div class="rc-line"><span>الباقي</span><span>${fmt(s.change)}</span></div>
+    <div class="rc-hr"></div>
+    <div style="text-align:center">شكراً لزيارتكم - خرزه</div>`;
+  window.print();
+}
+
+function reprintLast() {
+  reload();
+  if (!lastSale) lastSale = sales[sales.length - 1];
+  if (!lastSale) { alert('مفيش فواتير لسه'); return; }
+  printReceipt(lastSale);
+}
+
+function reprint(id) {
+  reload();
+  const s = sales.find(x => x.id === id);
+  if (s) printReceipt(s);
+}
+
+// ---------- tabs ----------
+function showTab(name) {
+  const tabs = { sale: ['saleTab', 'tabSale'], dash: ['dashTab', 'tabDash'], set: ['setTab', 'tabSet'], cust: ['custTab', 'tabCust'] };
+  Object.keys(tabs).forEach(t => {
+    document.getElementById(tabs[t][0]).style.display = t === name ? 'block' : 'none';
+    document.getElementById(tabs[t][1]).className = t === name ? 'on' : 'light';
+  });
+  reload();
+  if (name === 'sale') refreshCustSel();
+  if (name === 'dash') renderDash();
+  if (name === 'set') renderSettings();
+  if (name === 'cust') renderCustomers();
+}
+
+function renderDash() {
+  reload();
+  const today = new Date().toLocaleDateString('en-CA');
+  const list = sales.filter(s => new Date(s.date).toLocaleDateString('en-CA') === today);
+  const agg = {};
+  list.forEach(s => s.items.forEach(i => agg[i.name] = (agg[i.name] || 0) + i.qty));
+  const top = Object.entries(agg).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+  document.getElementById('dashContent').innerHTML = `
+    <div>
+      <div class="stat">عدد الفواتير<b>${list.length}</b></div>
+      <div class="stat">إجمالي المبيعات<b>${fmt(sum(list, s => s.total))} ج.م</b></div>
+      <div class="stat">كاش (صافي)<b>${fmt(sum(list, s => s.cashNet))}</b></div>
+      <div class="stat">انستاباي<b>${fmt(sum(list, s => s.payments.instapay))}</b></div>
+      <div class="stat">فودافون كاش<b>${fmt(sum(list, s => s.payments.vodafone))}</b></div>
+      <div class="stat">إجمالي الخصومات<b>${fmt(sum(list, s => s.invoiceDiscount))}</b></div>
+    </div>
+    <h2 style="margin-top:14px">أكتر المنتجات مبيعاً اليوم</h2>
+    ${top.length ? top.map(([n, q]) => `<div>${esc(n)} — ${q} قطعة</div>`).join('') : '<span class="muted">لا يوجد</span>'}
+    <h2 style="margin-top:14px">فواتير اليوم</h2>
+    <table>
+      <thead><tr><th>الوقت</th><th>الإجمالي</th><th>طريقة الدفع</th><th></th></tr></thead>
+      <tbody>${list.slice().reverse().map(s => {
+        const m = [];
+        if (s.payments.cash) m.push('كاش');
+        if (s.payments.instapay) m.push('انستاباي');
+        if (s.payments.vodafone) m.push('فودافون');
+        return `<tr>
+          <td>${new Date(s.date).toLocaleTimeString('ar-EG')}</td>
+          <td>${fmt(s.total)}</td>
+          <td>${m.join(' + ')}</td>
+          <td><button class="light" onclick="reprint(${s.id})">طباعة</button></td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+}
+
+function renderSettings() {
+  reload();
+  document.getElementById('setStore').value = settings.storeName || '';
+  document.getElementById('setMax').value = settings.maxDiscount ?? 20;
+  document.getElementById('setInsta').value = settings.instapay || '';
+  document.getElementById('setVoda').value = settings.vodafone || '';
+  document.getElementById('setWa').value = settings.whatsapp || '';
+  renderCoupons();
+}
+
+function saveSettings() {
+  settings = {
+    storeName: document.getElementById('setStore').value.trim() || 'خرزه',
+    maxDiscount: parseFloat(document.getElementById('setMax').value) || 0,
+    instapay: document.getElementById('setInsta').value.trim(),
+    vodafone: document.getElementById('setVoda').value.trim(),
+    whatsapp: document.getElementById('setWa').value.trim()
+  };
+  store('kharaza_settings', settings);
+  alert('تم الحفظ');
+}
+
+function renderCoupons() {
+  document.getElementById('couponsList').innerHTML = coupons.map((c, i) => `
+    <tr>
+      <td>${esc(c.code)}</td>
+      <td>${c.type === 'percent' ? c.value + '%' : fmt(c.value) + ' ج.م'}</td>
+      <td>${c.active ? 'فعال' : 'متوقف'}</td>
+      <td>
+        <button class="light" onclick="toggleCoupon(${i})">${c.active ? 'إيقاف' : 'تفعيل'}</button>
+        <button class="danger" onclick="delCoupon(${i})">حذف</button>
+      </td>
+    </tr>`).join('') || '<tr><td colspan="4" class="muted">مفيش كوبونات</td></tr>';
+}
+
+function addCoupon() {
+  reload();
+  const code = document.getElementById('cCode').value.trim().toUpperCase();
+  if (!code) return;
+  if (coupons.some(c => c.code.toUpperCase() === code)) { alert('الكود ده موجود'); return; }
+  coupons.push({
+    code,
+    type: document.getElementById('cType').value,
+    value: parseFloat(document.getElementById('cVal').value) || 0,
+    active: true
+  });
+  store('kharaza_coupons', coupons);
+  document.getElementById('cCode').value = '';
+  renderCoupons();
+}
+
+function toggleCoupon(i) {
+  reload();
+  coupons[i].active = !coupons[i].active;
+  store('kharaza_coupons', coupons);
+  renderCoupons();
+}
+
+function delCoupon(i) {
+  reload();
+  if (!confirm('تحذف الكوبون ' + coupons[i].code + '؟')) return;
+  coupons.splice(i, 1);
+  store('kharaza_coupons', coupons);
+  renderCoupons();
+}
+
+// ---------- customers ----------
+let editingCust = null;
+const $ = id => document.getElementById(id);
+
+function saveCustomer() {
+  reload();
+  const name = $('cuName').value.trim();
+  const phone = $('cuPhone').value.trim();
+  if (!name || !phone) { alert('الاسم والتليفون مطلوبين'); return; }
+  if (customers.some(c => c.phone === phone && c.id !== editingCust)) { alert('التليفون ده موجود لعميل تاني'); return; }
+  const data = { name, phone, address: $('cuAddr').value.trim(), note: $('cuNote').value.trim() };
+  if (editingCust) {
+    Object.assign(customers.find(c => c.id === editingCust), data);
+  } else {
+    customers.push({ id: Date.now(), ...data });
+  }
+  store('kharaza_customers', customers);
+  resetCustForm();
+  renderCustomers();
+  refreshCustSel();
+}
+
+function editCustomer(id) {
+  reload();
+  const c = customers.find(x => x.id === id);
+  if (!c) return;
+  editingCust = id;
+  $('cuName').value = c.name;
+  $('cuPhone').value = c.phone;
+  $('cuAddr').value = c.address || '';
+  $('cuNote').value = c.note || '';
+  $('custFormTitle').textContent = 'تعديل عميل';
+}
+
+function resetCustForm() {
+  editingCust = null;
+  ['cuName', 'cuPhone', 'cuAddr', 'cuNote'].forEach(id => $(id).value = '');
+  $('custFormTitle').textContent = 'إضافة عميل';
+}
+
+function delCustomer(id) {
+  reload();
+  if (sales.some(s => s.customerId === id)) { alert('العميل ليه فواتير مسجلة، مينفعش يتحذف'); return; }
+  if (!confirm('تحذف العميل؟')) return;
+  customers = customers.filter(c => c.id !== id);
+  store('kharaza_customers', customers);
+  renderCustomers();
+  refreshCustSel();
+}
+
+function renderCustomers() {
+  reload();
+  const q = $('cuSearch').value.trim().toLowerCase();
+  const list = customers.filter(c => !q || (c.name + ' ' + c.phone).toLowerCase().includes(q));
+  $('custRows').innerHTML = list.map(c => {
+    const mine = sales.filter(s => s.customerId === c.id);
+    return `<tr>
+      <td>${esc(c.name)}</td>
+      <td>${esc(c.phone)}</td>
+      <td>${mine.length}</td>
+      <td>${fmt(sum(mine, s => s.total))}</td>
+      <td>
+        <button class="light" onclick="editCustomer(${c.id})">تعديل</button>
+        <button class="danger" onclick="delCustomer(${c.id})">حذف</button>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="5" class="muted">مفيش عملاء</td></tr>';
+}
+
+function refreshCustSel() {
+  reload();
+  const sel = $('custSel');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">بدون عميل</option>' +
+    customers.map(c => `<option value="${c.id}">${esc(c.name)} - ${esc(c.phone)}</option>`).join('');
+  sel.value = cur;
+}
+
+// ---------- render ----------
+function renderAll() {
+  renderShift();
+  renderCart();
+  renderTotals();
+}
+
+reload();
+renderAll();
+refreshCustSel();
+document.getElementById('scan').focus();
+</script>
+</body>
+</html>

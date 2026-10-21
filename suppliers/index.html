@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>خرزه - الموردين والمشتريات</title>
+<style>
+  body { font-family: Tahoma, Arial, sans-serif; background: #faf6f8; margin: 0; padding: 16px; color: #333; font-size: 14px; }
+  h1 { color: #8b2252; margin: 0 0 10px; font-size: 22px; }
+  h2 { color: #8b2252; font-size: 16px; margin: 0 0 10px; }
+  .card { background: #fff; border-radius: 10px; padding: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.08); margin-bottom: 14px; }
+  .row { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-start; }
+  .col { flex: 1; min-width: 300px; }
+  input, select { padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+  input[type=number] { width: 100px; }
+  button { background: #8b2252; color: #fff; border: 0; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; margin: 2px; }
+  button.light { background: #eee; color: #333; }
+  button.danger { background: #c0392b; }
+  button.pay { background: #27ae60; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 6px; border-bottom: 1px solid #eee; text-align: right; vertical-align: middle; }
+  .muted { color: #888; font-size: 12px; }
+  .tabs button { background: #eee; color: #333; }
+  .tabs button.on { background: #8b2252; color: #fff; }
+  .pill { display: inline-block; padding: 3px 10px; border-radius: 12px; background: #eee; }
+  .ordered { background: #fcf3cf; }
+  .received { background: #d5f5e3; }
+  .low { color: #c0392b; font-weight: bold; }
+  .tot { font-size: 16px; font-weight: bold; color: #8b2252; }
+</style>
+</head>
+<body>
+<nav class="kh-nav" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px"><a href="../products/" style="background:#8b2252;color:#fff;text-decoration:none;padding:8px 12px;border-radius:6px;font-size:14px;font-family:Tahoma,Arial,sans-serif">المنتجات والباركود</a><a href="../pos/" style="background:#8b2252;color:#fff;text-decoration:none;padding:8px 12px;border-radius:6px;font-size:14px;font-family:Tahoma,Arial,sans-serif">نقطة البيع</a><a href="../suppliers/" style="background:#555;color:#fff;text-decoration:none;padding:8px 12px;border-radius:6px;font-size:14px;font-family:Tahoma,Arial,sans-serif">الموردين</a><a href="../dashboard/" style="background:#8b2252;color:#fff;text-decoration:none;padding:8px 12px;border-radius:6px;font-size:14px;font-family:Tahoma,Arial,sans-serif">لوحة التحكم</a></nav>
+
+<h1>خرزه - الموردين والمشتريات</h1>
+<p class="muted">البيانات محفوظة في نفس المتصفح بتاع المرحلتين الأولى والتانية، لازم تفتح الملفات من نفس المكان.</p>
+
+<div class="tabs" style="margin-bottom:12px">
+  <button id="tabSup" class="on" onclick="showTab('sup')">الموردين</button>
+  <button id="tabOrd" class="light" onclick="showTab('ord')">أوامر الشراء</button>
+  <button id="tabBal" class="light" onclick="showTab('bal')">المستحقات والتكاليف</button>
+</div>
+
+<!-- ========== SUPPLIERS ========== -->
+<div id="supTab">
+  <div class="card">
+    <h2>إضافة مورد</h2>
+    <div class="row">
+      <div class="col"><div>اسم المورد *</div><input id="sName" style="width:100%"></div>
+      <div class="col"><div>التليفون</div><input id="sPhone" style="width:100%"></div>
+      <div class="col"><div>العنوان</div><input id="sAddr" style="width:100%"></div>
+      <div class="col">
+        <div>شروط الدفع</div>
+        <select id="sTerms" style="width:100%">
+          <option>نقدي عند الاستلام</option>
+          <option>15 يوم</option>
+          <option>30 يوم</option>
+          <option>60 يوم</option>
+          <option>أخرى</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:10px"><button onclick="addSupplier()">حفظ المورد</button></div>
+  </div>
+  <div class="card">
+    <h2>قائمة الموردين</h2>
+    <table>
+      <thead><tr><th>الاسم</th><th>التليفون</th><th>العنوان</th><th>شروط الدفع</th><th></th></tr></thead>
+      <tbody id="supRows"></tbody>
+    </table>
+    <p id="supEmpty" class="muted" style="display:none">مفيش موردين لسه.</p>
+  </div>
+</div>
+
+<!-- ========== ORDERS ========== -->
+<div id="ordTab" style="display:none">
+  <div class="card">
+    <h2>أمر شراء جديد</h2>
+    <div class="row" style="align-items:flex-end">
+      <div class="col"><div>المورد</div><select id="oSup" style="width:100%"></select></div>
+    </div>
+    <div class="row" style="align-items:flex-end; margin-top:10px">
+      <div class="col"><div>المنتج</div><select id="oProd" style="width:100%"></select></div>
+      <div><div>الكمية</div><input id="oQty" type="number" min="1" value="1"></div>
+      <div><div>سعر التكلفة للقطعة</div><input id="oCost" type="number" min="0" step="0.01" value="0"></div>
+      <div><button class="light" onclick="addDraftLine()">إضافة للأمر</button></div>
+    </div>
+    <table style="margin-top:10px">
+      <thead><tr><th>المنتج</th><th>الكمية</th><th>التكلفة</th><th>الإجمالي</th><th></th></tr></thead>
+      <tbody id="draftRows"></tbody>
+    </table>
+    <div class="tot" style="margin-top:8px">إجمالي الأمر: <span id="draftTotal">0.00</span> ج.م</div>
+    <div style="margin-top:8px"><button class="pay" onclick="saveOrder()">حفظ أمر الشراء</button></div>
+  </div>
+
+  <div class="card">
+    <h2>أوامر الشراء</h2>
+    <table>
+      <thead><tr><th>التاريخ</th><th>المورد</th><th>عدد الأصناف</th><th>الإجمالي</th><th>الحالة</th><th></th></tr></thead>
+      <tbody id="orderRows"></tbody>
+    </table>
+    <p id="orderEmpty" class="muted" style="display:none">مفيش أوامر شراء لسه.</p>
+  </div>
+</div>
+
+<!-- ========== BALANCES ========== -->
+<div id="balTab" style="display:none">
+  <div class="row">
+    <div class="col">
+      <div class="card">
+        <h2>المستحقات للموردين</h2>
+        <table>
+          <thead><tr><th>المورد</th><th>إجمالي المستلم</th><th>المدفوع</th><th>المتبقي</th></tr></thead>
+          <tbody id="balRows"></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h2>تسجيل دفعة لمورد</h2>
+        <div><div>المورد</div><select id="pSup" style="width:100%"></select></div>
+        <div style="margin-top:8px"><div>المبلغ</div><input id="pAmt" type="number" min="0" step="0.01" value="0" style="width:100%"></div>
+        <div style="margin-top:8px"><div>ملاحظة (مثلاً رقم التحويل)</div><input id="pNote" style="width:100%"></div>
+        <div style="margin-top:8px"><button class="pay" onclick="recordPayment()">تسجيل الدفعة</button></div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card">
+        <h2>تاريخ أسعار التكلفة</h2>
+        <select id="cProd" style="width:100%" onchange="renderCostHistory()"></select>
+        <table style="margin-top:10px">
+          <thead><tr><th>التاريخ</th><th>المورد</th><th>التكلفة</th></tr></thead>
+          <tbody id="costRows"></tbody>
+        </table>
+        <p id="costEmpty" class="muted" style="display:none">مفيش سجل لهذا المنتج.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const K = {
+  products: 'kharaza_products',
+  sup: 'kharaza_suppliers',
+  po: 'kharaza_purchase_orders',
+  cost: 'kharaza_cost_history',
+  pay: 'kharaza_supplier_payments'
+};
+
+let products = [], suppliers = [], orders = [], costHist = [], supPay = [];
+let draft = [];
+
+function load(k, d) {
+  try { const v = JSON.parse(localStorage.getItem(k)); return v ?? d; } catch (e) { return d; }
+}
+function store(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
+function reload() {
+  products = load(K.products, []);
+  suppliers = load(K.sup, []);
+  orders = load(K.po, []);
+  costHist = load(K.cost, []);
+  supPay = load(K.pay, []);
+}
+function fmt(n) { return (Math.round((n || 0) * 100) / 100).toFixed(2); }
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function sum(arr, f) { return arr.reduce((a, x) => a + f(x), 0); }
+function supName(id) { const s = suppliers.find(x => x.id === id); return s ? s.name : '—'; }
+function prodLabel(p) { return [p.name, p.color, p.size].filter(Boolean).join(' / '); }
+
+// ---------- tabs ----------
+function showTab(name) {
+  const map = { sup: 'supTab', ord: 'ordTab', bal: 'balTab' };
+  Object.keys(map).forEach(k => {
+    document.getElementById(map[k]).style.display = k === name ? 'block' : 'none';
+    document.getElementById('tab' + k.charAt(0).toUpperCase() + k.slice(1)).className = k === name ? 'on' : 'light';
+  });
+  reload();
+  if (name === 'ord') { refreshSelects(); renderOrders(); }
+  if (name === 'bal') { refreshSelects(); renderBalances(); renderCostHistory(); }
+  if (name === 'sup') renderSuppliers();
+}
+
+// ---------- suppliers ----------
+function addSupplier() {
+  reload();
+  const name = document.getElementById('sName').value.trim();
+  if (!name) { alert('اكتب اسم المورد'); return; }
+  suppliers.push({
+    id: Date.now(),
+    name,
+    phone: document.getElementById('sPhone').value.trim(),
+    address: document.getElementById('sAddr').value.trim(),
+    terms: document.getElementById('sTerms').value
+  });
+  store(K.sup, suppliers);
+  ['sName', 'sPhone', 'sAddr'].forEach(id => document.getElementById(id).value = '');
+  renderSuppliers();
+  refreshSelects();
+}
+
+function delSupplier(id) {
+  reload();
+  if (orders.some(o => o.supplierId === id) || supPay.some(p => p.supplierId === id)) {
+    alert('المورد ده ليه أوامر شراء أو دفعات مسجلة، مينفعش يتحذف');
+    return;
+  }
+  if (!confirm('تحذف المورد؟')) return;
+  suppliers = suppliers.filter(s => s.id !== id);
+  store(K.sup, suppliers);
+  renderSuppliers();
+  refreshSelects();
+}
+
+function renderSuppliers() {
+  reload();
+  document.getElementById('supRows').innerHTML = suppliers.map(s => `
+    <tr>
+      <td>${esc(s.name)}</td>
+      <td>${esc(s.phone)}</td>
+      <td>${esc(s.address)}</td>
+      <td>${esc(s.terms)}</td>
+      <td><button class="danger" onclick="delSupplier(${s.id})">حذف</button></td>
+    </tr>`).join('');
+  document.getElementById('supEmpty').style.display = suppliers.length ? 'none' : 'block';
+}
+
+// ---------- selects ----------
+function refreshSelects() {
+  reload();
+  const supOpts = suppliers.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('')
+    || '<option value="">ضيف مورد الأول</option>';
+  document.getElementById('oSup').innerHTML = supOpts;
+  document.getElementById('pSup').innerHTML = supOpts;
+
+  const prodOpts = products.map(p => `<option value="${p.id}">${esc(prodLabel(p))} (${esc(p.barcode)})</option>`).join('')
+    || '<option value="">ضيف منتجات الأول من المرحلة الأولى</option>';
+  document.getElementById('oProd').innerHTML = prodOpts;
+  document.getElementById('cProd').innerHTML = prodOpts;
+}
+
+// ---------- purchase orders ----------
+function addDraftLine() {
+  reload();
+  const pid = Number(document.getElementById('oProd').value);
+  const qty = parseInt(document.getElementById('oQty').value) || 0;
+  const cost = parseFloat(document.getElementById('oCost').value) || 0;
+  const p = products.find(x => x.id === pid);
+  if (!p) { alert('اختار منتج'); return; }
+  if (qty <= 0) { alert('الكمية لازم تكون أكبر من صفر'); return; }
+  if (cost < 0) { alert('سعر التكلفة مش صحيح'); return; }
+  draft.push({ productId: p.id, name: prodLabel(p), qty, unitCost: cost });
+  document.getElementById('oQty').value = 1;
+  document.getElementById('oCost').value = 0;
+  renderDraft();
+}
+
+function delDraftLine(i) { draft.splice(i, 1); renderDraft(); }
+
+function renderDraft() {
+  document.getElementById('draftRows').innerHTML = draft.map((l, i) => `
+    <tr>
+      <td>${esc(l.name)}</td>
+      <td>${l.qty}</td>
+      <td>${fmt(l.unitCost)}</td>
+      <td>${fmt(l.qty * l.unitCost)}</td>
+      <td><button class="danger" onclick="delDraftLine(${i})">×</button></td>
+    </tr>`).join('');
+  document.getElementById('draftTotal').textContent = fmt(sum(draft, l => l.qty * l.unitCost));
+}
+
+function saveOrder() {
+  reload();
+  const sid = Number(document.getElementById('oSup').value);
+  if (!sid) { alert('اختار المورد'); return; }
+  if (!draft.length) { alert('ضيف منتجات للأمر'); return; }
+  orders.push({
+    id: Date.now(),
+    date: new Date().toISOString(),
+    supplierId: sid,
+    lines: draft.slice(),
+    total: sum(draft, l => l.qty * l.unitCost),
+    status: 'ordered'
+  });
+  store(K.po, orders);
+  draft = [];
+  renderDraft();
+  renderOrders();
+  alert('تم حفظ أمر الشراء. لما البضاعة توصل اضغط "استلام".');
+}
+
+function receiveOrder(id) {
+  reload();
+  const o = orders.find(x => x.id === id);
+  if (!o || o.status !== 'ordered') return;
+  if (!confirm('تأكيد استلام البضاعة؟ الكميات هتزيد في المخزون.')) return;
+
+  const now = new Date().toISOString();
+  o.lines.forEach(l => {
+    const p = products.find(x => x.id === l.productId);
+    if (p) {
+      p.qty = (parseInt(p.qty) || 0) + l.qty;
+      p.cost = l.unitCost;
+    }
+    costHist.push({ date: now, supplierId: o.supplierId, productId: l.productId, productName: l.name, cost: l.unitCost, orderId: o.id });
+  });
+  o.status = 'received';
+  o.receivedAt = now;
+
+  store(K.products, products);
+  store(K.cost, costHist);
+  store(K.po, orders);
+  renderOrders();
+  renderBalances();
+  alert('تم الاستلام وتحديث المخزون');
+}
+
+function delOrder(id) {
+  reload();
+  const o = orders.find(x => x.id === id);
+  if (!o || o.status !== 'ordered') { alert('مينفعش تحذف أمر اتستلم'); return; }
+  if (!confirm('تحذف أمر الشراء؟')) return;
+  orders = orders.filter(x => x.id !== id);
+  store(K.po, orders);
+  renderOrders();
+}
+
+function renderOrders() {
+  reload();
+  const list = orders.slice().reverse();
+  document.getElementById('orderRows').innerHTML = list.map(o => `
+    <tr class="${o.status}">
+      <td>${new Date(o.date).toLocaleDateString('ar-EG')}</td>
+      <td>${esc(supName(o.supplierId))}</td>
+      <td>${o.lines.length}</td>
+      <td>${fmt(o.total)}</td>
+      <td><span class="pill">${o.status === 'ordered' ? 'مطلوب' : 'مستلم'}</span></td>
+      <td>
+        ${o.status === 'ordered'
+          ? `<button class="pay" onclick="receiveOrder(${o.id})">استلام</button>
+             <button class="danger" onclick="delOrder(${o.id})">حذف</button>`
+          : ''}
+      </td>
+    </tr>`).join('');
+  document.getElementById('orderEmpty').style.display = orders.length ? 'none' : 'block';
+}
+
+// ---------- balances & payments ----------
+function recordPayment() {
+  reload();
+  const sid = Number(document.getElementById('pSup').value);
+  const amt = parseFloat(document.getElementById('pAmt').value) || 0;
+  if (!sid) { alert('اختار المورد'); return; }
+  if (amt <= 0) { alert('اكتب مبلغ صحيح'); return; }
+  supPay.push({
+    id: Date.now(),
+    date: new Date().toISOString(),
+    supplierId: sid,
+    amount: amt,
+    note: document.getElementById('pNote').value.trim()
+  });
+  store(K.pay, supPay);
+  document.getElementById('pAmt').value = 0;
+  document.getElementById('pNote').value = '';
+  renderBalances();
+}
+
+function renderBalances() {
+  reload();
+  document.getElementById('balRows').innerHTML = suppliers.map(s => {
+    const received = sum(orders.filter(o => o.supplierId === s.id && o.status === 'received'), o => o.total);
+    const paid = sum(supPay.filter(p => p.supplierId === s.id), p => p.amount);
+    const bal = received - paid;
+    return `<tr>
+      <td>${esc(s.name)}</td>
+      <td>${fmt(received)}</td>
+      <td>${fmt(paid)}</td>
+      <td class="${bal > 0 ? 'low' : ''}">${fmt(bal)}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="4" class="muted">مفيش موردين</td></tr>';
+}
+
+function renderCostHistory() {
+  reload();
+  const pid = Number(document.getElementById('cProd').value);
+  const rows = costHist.filter(c => c.productId === pid).slice().reverse();
+  document.getElementById('costRows').innerHTML = rows.map(c => `
+    <tr>
+      <td>${new Date(c.date).toLocaleDateString('ar-EG')}</td>
+      <td>${esc(supName(c.supplierId))}</td>
+      <td>${fmt(c.cost)}</td>
+    </tr>`).join('');
+  document.getElementById('costEmpty').style.display = rows.length ? 'none' : 'block';
+}
+
+// ---------- init ----------
+reload();
+renderSuppliers();
+refreshSelects();
+renderOrders();
+renderDraft();
+renderBalances();
+renderCostHistory();
+</script>
+</body>
+</html>

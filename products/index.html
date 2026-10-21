@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>خرزه - إدارة المنتجات والباركود</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/JsBarcode/3.11.6/JsBarcode.all.min.js"></script>
+<style>
+  body { font-family: Tahoma, Arial, sans-serif; background: #faf6f8; margin: 0; padding: 20px; color: #333; }
+  h1 { color: #8b2252; margin-top: 0; }
+  h2 { font-size: 18px; color: #8b2252; margin-top: 0; }
+  .card { background: #fff; border-radius: 10px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+  label { display: block; font-size: 14px; }
+  input, select { width: 100%; padding: 8px; margin-top: 4px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+  button { background: #8b2252; color: #fff; border: 0; padding: 8px 14px; border-radius: 6px; cursor: pointer; margin: 2px; font-size: 14px; }
+  button.light { background: #eee; color: #333; }
+  button.danger { background: #c0392b; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { padding: 8px; border-bottom: 1px solid #eee; text-align: right; }
+  .low { color: #c0392b; font-weight: bold; }
+  .muted { color: #888; font-size: 13px; }
+  #printArea { display: none; }
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { display: block; position: absolute; left: 0; top: 0; }
+    .label { page-break-inside: avoid; }
+  }
+  .label { border: 1px dashed #999; padding: 4px; text-align: center; box-sizing: border-box; overflow: hidden; font-family: Arial, sans-serif; }
+  .label .lname { font-size: 10px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .label .lprice { font-size: 11px; font-weight: bold; }
+</style>
+</head>
+<body>
+<nav class="kh-nav" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px"><a href="../products/" style="background:#555;color:#fff;text-decoration:none;padding:8px 12px;border-radius:6px;font-size:14px;font-family:Tahoma,Arial,sans-serif">المنتجات والباركود</a><a href="../pos/" style="background:#8b2252;color:#fff;text-decoration:none;padding:8px 12px;border-radius:6px;font-size:14px;font-family:Tahoma,Arial,sans-serif">نقطة البيع</a><a href="../suppliers/" style="background:#8b2252;color:#fff;text-decoration:none;padding:8px 12px;border-radius:6px;font-size:14px;font-family:Tahoma,Arial,sans-serif">الموردين</a><a href="../dashboard/" style="background:#8b2252;color:#fff;text-decoration:none;padding:8px 12px;border-radius:6px;font-size:14px;font-family:Tahoma,Arial,sans-serif">لوحة التحكم</a></nav>
+
+<h1>خرزه - إدارة المنتجات والباركود</h1>
+<p class="muted">المرحلة الأولى: إضافة المنتجات وتوليد الباركود وطباعة الملصقات. البيانات محفوظة في هذا المتصفح على هذا الجهاز.</p>
+
+<div class="card">
+  <h2>إضافة منتج جديد</h2>
+  <form id="productForm">
+    <div class="grid">
+      <label>اسم المنتج *<input id="name" required></label>
+      <label>الفئة
+        <select id="category">
+          <option>شنط سواريه</option>
+          <option>شنط موبايل</option>
+          <option>شنط خروجة</option>
+          <option>شنط بالخرز</option>
+          <option>أحزمة موبايل</option>
+          <option>كفرات موبايل</option>
+          <option>Breloques</option>
+          <option>فوانيس</option>
+          <option>توزيعات</option>
+          <option>أخرى</option>
+        </select>
+      </label>
+      <label>اللون<input id="color"></label>
+      <label>المقاس<input id="size"></label>
+      <label>سعر البيع *<input id="price" type="number" step="0.01" min="0" required></label>
+      <label>التكلفة<input id="cost" type="number" step="0.01" min="0"></label>
+      <label>الكمية الحالية<input id="qty" type="number" min="0" value="0"></label>
+      <label>حد التنبيه (أقل كمية)<input id="minQty" type="number" min="0" value="2"></label>
+      <label>باركود موجود (اختياري)<input id="existingBarcode" placeholder="سيب فاضي لو مفيش"></label>
+    </div>
+    <p class="muted">لو المنتج ملوش باركود، سيبه فاضي وهيتولد تلقائياً بكود داخلي (SKU).</p>
+    <button type="submit">حفظ المنتج</button>
+  </form>
+</div>
+
+<div class="card">
+  <h2>المنتجات</h2>
+  <input id="search" placeholder="ابحث بالاسم أو الفئة أو الكود..." style="margin-bottom:10px">
+  <div style="margin-bottom:10px">
+    <label style="display:inline-block;width:auto">مقاس الملصق:
+      <select id="labelSize">
+        <option value="40x25">40 × 25 مم</option>
+        <option value="50x30" selected>50 × 30 مم</option>
+        <option value="60x40">60 × 40 مم</option>
+      </select>
+    </label>
+  </div>
+  <div style="overflow-x:auto">
+    <table>
+      <thead>
+        <tr><th>SKU</th><th>المنتج</th><th>الفئة</th><th>اللون / المقاس</th><th>السعر</th><th>الكمية</th><th>إجراءات</th></tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+  <p id="empty" class="muted" style="display:none">مفيش منتجات لسه.</p>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+const KEY = 'kharaza_products';
+let products = JSON.parse(localStorage.getItem(KEY) || '[]');
+
+function save() {
+  localStorage.setItem(KEY, JSON.stringify(products));
+}
+
+function genSku() {
+  const t = Date.now().toString(36).toUpperCase().slice(-6);
+  const r = Math.random().toString(36).toUpperCase().slice(2, 5);
+  return 'KH-' + t + r;
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+document.getElementById('productForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const sku = genSku();
+  const existing = document.getElementById('existingBarcode').value.trim();
+  const product = {
+    id: Date.now(),
+    sku,
+    barcode: existing || sku,
+    hasOwnBarcode: !!existing,
+    name: document.getElementById('name').value.trim(),
+    category: document.getElementById('category').value,
+    color: document.getElementById('color').value.trim(),
+    size: document.getElementById('size').value.trim(),
+    price: parseFloat(document.getElementById('price').value) || 0,
+    cost: parseFloat(document.getElementById('cost').value) || 0,
+    qty: parseInt(document.getElementById('qty').value) || 0,
+    minQty: parseInt(document.getElementById('minQty').value) || 0,
+  };
+  products.push(product);
+  save();
+  e.target.reset();
+  document.getElementById('minQty').value = 2;
+  document.getElementById('qty').value = 0;
+  render();
+});
+
+function render() {
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  const list = products.filter(p =>
+    !q || [p.name, p.category, p.sku, p.barcode, p.color, p.size].join(' ').toLowerCase().includes(q)
+  );
+  document.getElementById('empty').style.display = products.length ? 'none' : 'block';
+  document.getElementById('rows').innerHTML = list.map(p => {
+    const low = p.qty <= p.minQty;
+    return `
+      <tr>
+        <td>${escapeHtml(p.barcode)}</td>
+        <td>${escapeHtml(p.name)}</td>
+        <td>${escapeHtml(p.category)}</td>
+        <td>${escapeHtml([p.color, p.size].filter(Boolean).join(' / '))}</td>
+        <td>${p.price.toFixed(2)}</td>
+        <td class="${low ? 'low' : ''}">${p.qty}${low ? ' (قربت تخلص)' : ''}</td>
+        <td>
+          <button class="light" onclick="printLabel(${p.id})">طباعة ملصق</button>
+          <button class="danger" onclick="removeProduct(${p.id})">حذف</button>
+        </td>
+      </tr>`;
+  }).join('');
+}
+
+function removeProduct(id) {
+  const p = products.find(x => x.id === id);
+  if (!p || !confirm('تحذف "' + p.name + '"؟')) return;
+  products = products.filter(x => x.id !== id);
+  save();
+  render();
+}
+
+function printLabel(id) {
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  const [w, h] = document.getElementById('labelSize').value.split('x').map(Number);
+
+  const area = document.getElementById('printArea');
+  area.innerHTML = `
+    <div class="label" style="width:${w}mm;height:${h}mm">
+      <div class="lname">${escapeHtml(p.name)}</div>
+      <svg class="bc"></svg>
+      <div class="lprice">${p.price.toFixed(2)} ج.م</div>
+    </div>`;
+
+  const svg = area.querySelector('svg.bc');
+  try {
+    JsBarcode(svg, p.barcode, {
+      format: 'CODE128',
+      width: 1.2,
+      height: Math.round(h * 1.6),
+      displayValue: true,
+      fontSize: 9,
+      margin: 0
+    });
+  } catch (err) {
+    alert('الكود ده مش مدعوم في Code128. استخدم حروف إنجليزية وأرقام بس.');
+    return;
+  }
+  svg.style.maxWidth = '100%';
+  svg.style.height = 'auto';
+
+  window.print();
+}
+
+document.getElementById('search').addEventListener('input', render);
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>خرزه - المتجر</title>
+<style>
+  :root { --brand: #8b2252; --soft: #faf6f8; --ink: #333; }
+  * { box-sizing: border-box; }
+  body { font-family: Tahoma, Arial, sans-serif; background: var(--soft); margin: 0; color: var(--ink); }
+  header { background: var(--brand); color: #fff; padding: 16px; text-align: center; }
+  header h1 { margin: 0; font-size: 26px; letter-spacing: 1px; }
+  header p { margin: 4px 0 0; font-size: 13px; opacity: .9; }
+  main { max-width: 1000px; margin: 0 auto; padding: 16px; }
+  .bar { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 14px; }
+  select, input, textarea { padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; font-family: inherit; width: 100%; }
+  .cartBtn { background: var(--brand); color: #fff; border: 0; padding: 10px 16px; border-radius: 8px; font-size: 15px; cursor: pointer; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+  .prod { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 6px rgba(0,0,0,.08); display: flex; flex-direction: column; }
+  .pimg { height: 170px; background: #f3e6ed; display: flex; align-items: center; justify-content: center; color: var(--brand); font-size: 40px; }
+  .pimg img { width: 100%; height: 100%; object-fit: cover; }
+  .pbody { padding: 12px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .pname { font-weight: bold; font-size: 15px; }
+  .pmeta { font-size: 12px; color: #888; }
+  .pprice { color: var(--brand); font-weight: bold; font-size: 16px; }
+  .add { margin-top: auto; background: var(--brand); color: #fff; border: 0; padding: 9px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+  .add:disabled { background: #ccc; cursor: not-allowed; }
+  .card { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 1px 6px rgba(0,0,0,.08); margin-top: 18px; }
+  h2 { color: var(--brand); font-size: 18px; margin: 0 0 12px; }
+  .line { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid #eee; align-items: center; }
+  .qty button { background: #eee; border: 0; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; font-size: 16px; }
+  .tot { font-size: 20px; font-weight: bold; color: var(--brand); margin-top: 10px; }
+  .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+  .fields label { font-size: 14px; display: block; }
+  .pay { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .pay label { background: #f7eef3; padding: 10px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+  .info { background: #fff8e1; border-radius: 8px; padding: 10px; margin-top: 10px; font-size: 14px; }
+  .send { width: 100%; background: #25D366; color: #fff; border: 0; padding: 14px; border-radius: 10px; font-size: 17px; cursor: pointer; margin-top: 14px; }
+  .muted { color: #888; font-size: 13px; }
+  .done { background: #d5f5e3; border-radius: 10px; padding: 14px; margin-top: 14px; }
+  .hidden { display: none; }
+  footer { text-align: center; color: #888; font-size: 12px; padding: 24px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>خرزه</h1>
+  <p>شنط سواريه، شنط موبايل، أحزمة، كفرات، Breloques، فوانيس وتوزيعات</p>
+</header>
+
+<main>
+  <div class="bar">
+    <select id="catFilter" style="max-width:240px" onchange="renderProducts()">
+      <option value="">كل الفئات</option>
+    </select>
+    <button class="cartBtn" onclick="document.getElementById('checkout').scrollIntoView({behavior:'smooth'})">
+      السلة (<span id="cartCount">0</span>)
+    </button>
+  </div>
+
+  <div class="grid" id="products"></div>
+
+  <section class="card" id="checkout">
+    <h2>سلة الشراء</h2>
+    <div id="cartLines"></div>
+    <p id="cartEmpty" class="muted">السلة فاضية، ضيف المنتجات اللي عاوزها.</p>
+    <div class="tot">الإجمالي: <span id="cartTotal">0</span> ج.م</div>
+  </section>
+
+  <section class="card" id="formSec">
+    <h2>بيانات الطلب</h2>
+    <div class="fields">
+      <label>الاسم *<input id="cName" placeholder="اسمك"></label>
+      <label>رقم التليفون *<input id="cPhone" placeholder="01xxxxxxxxx" inputmode="tel"></label>
+      <label style="grid-column: 1 / -1">العنوان بالتفصيل *<textarea id="cAddr" rows="2" placeholder="المحافظة، المنطقة، الشارع، رقم العمارة"></textarea></label>
+      <label style="grid-column: 1 / -1">ملاحظات (اختياري)<input id="cNote" placeholder="مثلاً: لون معين أو ميعاد مناسب"></label>
+    </div>
+
+    <h2 style="margin-top:18px">طريقة الدفع</h2>
+    <div class="pay">
+      <label><input type="radio" name="pm" value="instapay" checked onchange="showPayInfo()"> انستاباي</label>
+      <label><input type="radio" name="pm" value="vodafone" onchange="showPayInfo()"> فودافون كاش</label>
+      <label><input type="radio" name="pm" value="cod" onchange="showPayInfo()"> الدفع عند الاستلام</label>
+    </div>
+    <div id="payInfo" class="info"></div>
+
+    <button class="send" onclick="sendOrder()">ابعت الطلب على واتساب</button>
+    <p class="muted" style="text-align:center">هيتفتح الواتساب برسالة الطلب جاهزة، ابعتها وبعدين ابعت صورة إيصال التحويل لو دفعت إلكترونياً.</p>
+
+    <div id="done" class="done hidden"></div>
+  </section>
+</main>
+
+<footer>خرزه © <span id="year"></span></footer>
+
+<script>
+/* =========================================================
+   عدّل الإعدادات والمنتجات هنا
+   ========================================================= */
+const CONFIG = {
+  brand: 'خرزه',
+  whatsapp: '201111361036',   // رقم الواتساب اللي هيوصل عليه الطلب (بالكود الدولي، من غير +)
+  instapay: '01000000000',    // رقم انستاباي أو عنوانه
+  vodafone: '01000000000',    // رقم فودافون كاش
+  currency: 'ج.م'
+};
+
+const PRODUCTS = [
+  { id: 'K1', name: 'شنطة سواريه بالخرز', category: 'شنط سواريه', color: 'وردي', size: '', price: 350, stock: 5, img: '' },
+  { id: 'K2', name: 'شنطة موبايل بالخرز', category: 'شنط موبايل', color: 'أبيض', size: '', price: 180, stock: 8, img: '' },
+  { id: 'K3', name: 'شنطة خروجة', category: 'شنط خروجة', color: 'بيج', size: '', price: 290, stock: 3, img: '' },
+  { id: 'K4', name: 'حزام موبايل طويل', category: 'أحزمة موبايل', color: 'أسود', size: '', price: 90, stock: 10, img: '' },
+  { id: 'K5', name: 'كفر موبايل', category: 'كفرات موبايل', color: 'شفاف', size: '', price: 120, stock: 0, img: '' },
+  { id: 'K6', name: 'Breloque مفاتيح', category: 'Breloques', color: 'ذهبي', size: '', price: 45, stock: 12, img: '' },
+  { id: 'K7', name: 'فانوس', category: 'فوانيس', color: '', size: '', price: 150, stock: 4, img: '' },
+  { id: 'K8', name: 'توزيعة (علبة)', category: 'توزيعات', color: '', size: '', price: 75, stock: 20, img: '' }
+];
+/* ========================================================= */
+
+let cart = [];
+
+function fmt(n) { return (Math.round((n || 0) * 100) / 100).toFixed(2); }
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function findP(id) { return PRODUCTS.find(p => p.id === id); }
+function cartTotal() { return cart.reduce((s, l) => { const p = findP(l.id); return s + p.price * l.qty; }, 0); }
+
+function initCategories() {
+  const cats = [...new Set(PRODUCTS.map(p => p.category))];
+  document.getElementById('catFilter').innerHTML =
+    '<option value="">كل الفئات</option>' + cats.map(c => `<option>${esc(c)}</option>`).join('');
+}
+
+function renderProducts() {
+  const cat = document.getElementById('catFilter').value;
+  const list = PRODUCTS.filter(p => !cat || p.category === cat);
+  document.getElementById('products').innerHTML = list.map(p => {
+    const inCart = cart.find(l => l.id === p.id);
+    const out = p.stock <= 0;
+    const maxed = inCart && inCart.qty >= p.stock;
+    return `
+      <div class="prod">
+        <div class="pimg">${p.img ? `<img src="${esc(p.img)}" alt="${esc(p.name)}">` : '✨'}</div>
+        <div class="pbody">
+          <div class="pname">${esc(p.name)}</div>
+          <div class="pmeta">${esc([p.color, p.size].filter(Boolean).join(' · '))}</div>
+          <div class="pprice">${fmt(p.price)} ${CONFIG.currency}</div>
+          <div class="muted">${out ? 'غير متاح حالياً' : ''}</div>
+          <button class="add" ${out || maxed ? 'disabled' : ''} onclick="addToCart('${p.id}')">
+            ${out ? 'نفدت الكمية' : maxed ? 'وصلت للحد المتاح' : 'أضف للسلة'}
+          </button>
+        </div>
+      </div>`;
+  }).join('') || '<p class="muted">مفيش منتجات في الفئة دي.</p>';
+}
+
+function addToCart(id) {
+  const p = findP(id);
+  const line = cart.find(l => l.id === id);
+  if (line) { if (line.qty < p.stock) line.qty++; }
+  else cart.push({ id, qty: 1 });
+  renderAll();
+}
+
+function changeQty(id, d) {
+  const line = cart.find(l => l.id === id);
+  const p = findP(id);
+  if (!line) return;
+  const nq = line.qty + d;
+  if (nq <= 0) cart = cart.filter(l => l.id !== id);
+  else if (nq <= p.stock) line.qty = nq;
+  renderAll();
+}
+
+function renderCart() {
+  document.getElementById('cartLines').innerHTML = cart.map(l => {
+    const p = findP(l.id);
+    return `
+      <div class="line">
+        <div>
+          <div>${esc(p.name)}</div>
+          <div class="muted">${fmt(p.price)} ${CONFIG.currency}</div>
+        </div>
+        <div class="qty">
+          <button onclick="changeQty('${l.id}',-1)">−</button>
+          <span style="margin:0 8px">${l.qty}</span>
+          <button onclick="changeQty('${l.id}',1)">+</button>
+        </div>
+        <div>${fmt(p.price * l.qty)}</div>
+      </div>`;
+  }).join('');
+  document.getElementById('cartEmpty').style.display = cart.length ? 'none' : 'block';
+  document.getElementById('cartTotal').textContent = fmt(cartTotal());
+  document.getElementById('cartCount').textContent = cart.reduce((s, l) => s + l.qty, 0);
+}
+
+function showPayInfo() {
+  const m = document.querySelector('input[name="pm"]:checked').value;
+  const box = document.getElementById('payInfo');
+  if (m === 'instapay') box.innerHTML = `حوّل المبلغ على انستاباي: <b>${esc(CONFIG.instapay)}</b>`;
+  else if (m === 'vodafone') box.innerHTML = `حوّل المبلغ على فودافون كاش: <b>${esc(CONFIG.vodafone)}</b>`;
+  else box.innerHTML = 'هتدفع كاش لما الطلب يوصلك.';
+}
+
+function renderAll() {
+  renderProducts();
+  renderCart();
+}
+
+function sendOrder() {
+  if (!cart.length) { alert('السلة فاضية'); return; }
+  const name = document.getElementById('cName').value.trim();
+  const phone = document.getElementById('cPhone').value.trim();
+  const addr = document.getElementById('cAddr').value.trim();
+  const note = document.getElementById('cNote').value.trim();
+  if (!name || !phone || !addr) { alert('اكتب الاسم والتليفون والعنوان'); return; }
+  if (!/^01[0-9]{9}$/.test(phone)) { alert('رقم التليفون لازم يكون 11 رقم ويبدأ بـ 01'); return; }
+
+  // تأكد من المخزون قبل الإرسال
+  for (const l of cart) {
+    const p = findP(l.id);
+    if (l.qty > p.stock) { alert(`الكمية المتاحة من ${p.name} هي ${p.stock} بس`); return; }
+  }
+
+  const code = 'KH' + Date.now().toString(36).toUpperCase().slice(-5);
+  const m = document.querySelector('input[name="pm"]:checked').value;
+  const payLabel = m === 'instapay' ? 'انستاباي' : m === 'vodafone' ? 'فودافون كاش' : 'الدفع عند الاستلام';
+
+  const lines = cart.map(l => {
+    const p = findP(l.id);
+    return `• ${p.name}${p.color ? ' - ' + p.color : ''} × ${l.qty} = ${fmt(p.price * l.qty)} ${CONFIG.currency}`;
+  }).join('\n');
+
+  const text =
+`طلب جديد من ${CONFIG.brand}
+رقم الطلب: ${code}
+
+${lines}
+
+الإجمالي: ${fmt(cartTotal())} ${CONFIG.currency}
+طريقة الدفع: ${payLabel}
+
+الاسم: ${name}
+التليفون: ${phone}
+العنوان: ${addr}${note ? '\nملاحظات: ' + note : ''}`;
+
+  const url = `https://wa.me/${CONFIG.whatsapp}?text=${encodeURIComponent(text)}`;
+  window.open(url, '_blank');
+
+  document.getElementById('done').classList.remove('hidden');
+  document.getElementById('done').innerHTML =
+    `تم تجهيز طلبك برقم <b>${code}</b>. ابعت الرسالة في الواتساب` +
+    (m !== 'cod' ? `، وبعدها ابعت صورة إيصال التحويل في نفس المحادثة.` : '.');
+}
+
+document.getElementById('year').textContent = new Date().getFullYear();
+initCategories();
+showPayInfo();
+renderAll();
+</script>
+</body>
+</html>
