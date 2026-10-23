@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>خرزه - لوحة الإدارة</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  body { font-family: Tahoma, Arial, sans-serif; background: #faf6f8; margin: 0; padding: 16px; color: #333; font-size: 14px; }
+  h1 { color: #8b2252; font-size: 22px; margin: 0 0 12px; }
+  h2 { color: #8b2252; font-size: 16px; margin: 0 0 10px; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+  .tabs button { background: #eee; color: #333; }
+  .tabs button.on { background: #8b2252; color: #fff; }
+  .card { background: #fff; border-radius: 10px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.08); margin-bottom: 14px; }
+  .field { margin-bottom: 10px; }
+  .field input, .field select, .field textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; box-sizing: border-box; font-family: inherit; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+  button { background: #8b2252; color: #fff; border: 0; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; margin: 2px; }
+  button.light { background: #eee; color: #333; }
+  button.danger { background: #c0392b; }
+  button.ok { background: #27ae60; }
+  input.inline { padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 6px; border-bottom: 1px solid #eee; text-align: right; vertical-align: middle; }
+  .muted { color: #888; font-size: 12px; }
+  .msg { margin-top: 8px; font-size: 13px; color: #8b2252; min-height: 18px; }
+  .low { color: #c0392b; font-weight: bold; }
+  .pill { display: inline-block; padding: 3px 9px; border-radius: 12px; background: #eee; font-size: 12px; }
+  .s-pending { background: #fcf3cf; }
+  .s-confirmed { background: #d6eaf8; }
+  .s-shipped { background: #d5f5e3; }
+  .s-cancelled { background: #fadbd8; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+
+<h1>خرزه - لوحة الإدارة</h1>
+
+<div class="card" id="loginCard">
+  <h2>تسجيل الدخول للموظفين</h2>
+  <div class="field">الإيميل<br><input id="lEmail" type="email"></div>
+  <div class="field">كلمة السر<br><input id="lPass" type="password"></div>
+  <button onclick="login()">دخول</button>
+  <div class="msg" id="loginMsg"></div>
+</div>
+
+<div id="admin" class="hidden">
+  <div class="row" style="margin-bottom:12px">
+    <div class="tabs">
+      <button id="tabOrders" class="on" onclick="showTab('orders')">طلبات المتجر</button>
+      <button id="tabProducts" class="light" onclick="showTab('products')">المنتجات</button>
+      <button id="tabSettings" class="light" onclick="showTab('settings')">أرقام الدفع</button>
+      <button id="tabCoupons" class="light" onclick="showTab('coupons')">الكوبونات</button>
+    </div>
+    <button class="light" onclick="logout()">تسجيل خروج</button>
+  </div>
+
+  <!-- ===== ORDERS ===== -->
+  <div id="ordersTab">
+    <div class="card">
+      <div class="row" style="margin-bottom:10px">
+        <h2 style="margin:0">طلبات المتجر (<span id="orderCount">0</span>)</h2>
+        <select id="orderFilter" class="inline" onchange="renderOrders()">
+          <option value="">كل الحالات</option>
+          <option value="pending">بانتظار التأكيد</option>
+          <option value="confirmed">مؤكد</option>
+          <option value="shipped">اتشحن</option>
+          <option value="cancelled">ملغي</option>
+        </select>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>الرقم</th><th>التاريخ</th><th>العميل</th><th>التليفون</th><th>الإجمالي</th><th>الدفع</th><th>الحالة</th><th></th></tr></thead>
+          <tbody id="orderRows"></tbody>
+        </table>
+      </div>
+      <p class="muted" id="orderEmpty" style="display:none">مفيش طلبات لسه.</p>
+      <div class="msg" id="orderMsg"></div>
+    </div>
+    <div class="card hidden" id="orderDetail"></div>
+  </div>
+
+  <!-- ===== PRODUCTS ===== -->
+  <div id="productsTab" class="hidden">
+    <div class="card">
+      <h2 id="pFormTitle">إضافة منتج جديد</h2>
+      <div class="grid">
+        <div class="field">الاسم *<input id="fName"></div>
+        <div class="field">الفئة<input id="fCat" list="catList" placeholder="اختار أو اكتب"></div>
+        <datalist id="catList">
+          <option>شنط سواريه</option><option>شنط موبايل</option><option>شنط خروجة</option>
+          <option>شنط بالخرز</option><option>أحزمة موبايل</option><option>كفرات موبايل</option>
+          <option>Breloques</option><option>فوانيس</option><option>توزيعات</option><option>أخرى</option>
+        </datalist>
+        <div class="field">اللون<input id="fColor"></div>
+        <div class="field">المقاس<input id="fSize"></div>
+        <div class="field">سعر البيع *<input id="fPrice" type="number" min="0" step="0.01"></div>
+        <div class="field">التكلفة<input id="fCost" type="number" min="0" step="0.01"></div>
+        <div class="field">الكمية المتاحة<input id="fQty" type="number" min="0" step="1" value="0"></div>
+        <div class="field">حد التنبيه<input id="fMin" type="number" min="0" step="1" value="2"></div>
+        <div class="field">رابط الصورة<input id="fImg" placeholder="اختياري"></div>
+        <div class="field">رابط الفيديو (mp4)<input id="fVideo" placeholder="اختياري"></div>
+      </div>
+      <div class="field"><label><input type="checkbox" id="fActive" checked> ظاهر في المتجر</label></div>
+      <button class="ok" onclick="saveProduct()">حفظ المنتج</button>
+      <button class="light" onclick="resetProductForm()">مسح الخانات</button>
+      <div class="msg" id="pMsg"></div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="margin-bottom:10px">
+        <h2 style="margin:0">قائمة المنتجات (<span id="pCount">0</span>)</h2>
+        <input id="pSearch" class="inline" placeholder="ابحث بالاسم أو الفئة" style="width:240px" oninput="renderProducts()">
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>الاسم</th><th>الفئة</th><th>السعر</th><th>الكمية</th><th>الحالة</th><th></th></tr></thead>
+          <tbody id="pRows"></tbody>
+        </table>
+      </div>
+      <p class="muted" id="pEmpty" style="display:none">مفيش منتجات لسه.</p>
+      <div class="msg" id="pListMsg"></div>
+    </div>
+  </div>
+
+  <!-- ===== SETTINGS ===== -->
+  <div id="settingsTab" class="hidden">
+    <div class="card" style="max-width:720px">
+      <h2>أرقام الدفع والطلبات</h2>
+      <div class="field">رقم انستاباي<input id="sInsta"></div>
+      <div class="field">رقم فودافون كاش<input id="sVoda"></div>
+      <div class="field"><label><input type="checkbox" id="sVodaOn"> تفعيل فودافون كاش في المتجر</label></div>
+      <div class="field"><label><input type="checkbox" id="sCod"> تفعيل الدفع عند الاستلام في المتجر</label></div>
+      <div class="field">رقم الواتساب لاستقبال الطلبات (201xxxxxxxxx)<input id="sWa"></div>
+      <button class="ok" onclick="savePayments()">حفظ</button>
+      <div class="msg" id="sMsg"></div>
+    </div>
+  </div>
+
+  <!-- ===== COUPONS ===== -->
+  <div id="couponsTab" class="hidden">
+    <div class="card">
+      <h2>الكوبونات</h2>
+      <div class="row" style="justify-content:flex-start;gap:10px">
+        <input id="cCode" class="inline" placeholder="الكود مثلاً SUMMER10">
+        <select id="cType" class="inline"><option value="percent">نسبة %</option><option value="fixed">مبلغ ج.م</option></select>
+        <input id="cVal" class="inline" type="number" min="0" step="0.01" value="10" style="width:100px">
+        <button onclick="addCoupon()">إضافة</button>
+      </div>
+      <table style="margin-top:12px">
+        <thead><tr><th>الكود</th><th>الخصم</th><th>الحالة</th><th></th></tr></thead>
+        <tbody id="couponRows"></tbody>
+      </table>
+      <p class="muted" id="cEmpty" style="display:none">مفيش كوبونات لسه.</p>
+      <div class="msg" id="cMsg"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://igtgqlhuumfqxtbzgnuq.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_zaFIX1_KmXt7LJnaGZpmjQ_7uBg3EkY';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const $ = id => document.getElementById(id);
+const STATUS_LABEL = { pending: 'بانتظار التأكيد', confirmed: 'مؤكد', shipped: 'اتشحن', cancelled: 'ملغي' };
+let products = [], orders = [], coupons = [], editingProductId = null;
+
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmt(n) { return (Math.round((n || 0) * 100) / 100).toFixed(2); }
+function say(id, t) { $(id).textContent = t || ''; }
+
+/* ---------- session ---------- */
+async function init() {
+  const { data } = await sb.auth.getSession();
+  if (data.session) showAdmin(); else showLogin();
+}
+function showAdmin() {
+  $('loginCard').classList.add('hidden');
+  $('admin').classList.remove('hidden');
+  showTab('orders');
+}
+function showLogin() {
+  $('loginCard').classList.remove('hidden');
+  $('admin').classList.add('hidden');
+}
+async function login() {
+  say('loginMsg', 'جاري الدخول...');
+  const { error } = await sb.auth.signInWithPassword({ email: $('lEmail').value.trim(), password: $('lPass').value });
+  if (error) { say('loginMsg', 'الإيميل أو كلمة السر غلط'); return; }
+  $('lPass').value = '';
+  say('loginMsg', '');
+  showAdmin();
+}
+async function logout() {
+  await sb.auth.signOut();
+  showLogin();
+}
+
+/* ---------- tabs ---------- */
+function showTab(name) {
+  const map = { orders: 'ordersTab', products: 'productsTab', settings: 'settingsTab', coupons: 'couponsTab' };
+  Object.keys(map).forEach(k => {
+    $(map[k]).classList.toggle('hidden', k !== name);
+    $('tab' + k.charAt(0).toUpperCase() + k.slice(1)).className = k === name ? 'on' : 'light';
+  });
+  if (name === 'orders') loadOrders();
+  if (name === 'products') loadProducts();
+  if (name === 'settings') loadSettings();
+  if (name === 'coupons') loadCoupons();
+}
+
+/* ---------- orders ---------- */
+async function loadOrders() {
+  const { data, error } = await sb.from('web_orders').select('*').order('created_at', { ascending: false }).limit(300);
+  if (error) { say('orderMsg', 'مش قادر أحمّل الطلبات: ' + error.message); return; }
+  orders = data || [];
+  renderOrders();
+}
+
+function renderOrders() {
+  const f = $('orderFilter').value;
+  const list = orders.filter(o => !f || o.status === f);
+  $('orderCount').textContent = orders.length;
+  $('orderEmpty').style.display = orders.length ? 'none' : 'block';
+  $('orderRows').innerHTML = list.map(o => `
+    <tr class="s-${esc(o.status)}">
+      <td>${esc(o.id)}</td>
+      <td>${new Date(o.created_at).toLocaleString('ar-EG')}</td>
+      <td>${esc(o.name)}</td>
+      <td>${esc(o.phone)}</td>
+      <td>${fmt(o.total)}</td>
+      <td>${esc(o.payment_method)}</td>
+      <td><span class="pill">${STATUS_LABEL[o.status] || esc(o.status)}</span></td>
+      <td><button class="light" onclick="openOrder('${esc(o.id)}')">تفاصيل</button></td>
+    </tr>`).join('');
+}
+
+function openOrder(id) {
+  const o = orders.find(x => x.id === id);
+  if (!o) return;
+  const items = (o.items || []).map(i =>
+    `<tr><td>${esc(i.name)} ${esc(i.color || '')}</td><td>${i.qty}</td><td>${fmt(i.price)}</td><td>${fmt(i.lineTotal)}</td></tr>`).join('');
+  const actions = [];
+  if (o.status === 'pending') actions.push(`<button class="ok" onclick="setStatus('${esc(o.id)}','confirmed')">تأكيد الدفع وخصم المخزون</button>`);
+  if (o.status === 'confirmed') actions.push(`<button onclick="setStatus('${esc(o.id)}','shipped')">تم الشحن</button>`);
+  if (o.status !== 'cancelled' && o.status !== 'shipped') actions.push(`<button class="danger" onclick="setStatus('${esc(o.id)}','cancelled')">إلغاء الطلب</button>`);
+
+  $('orderDetail').classList.remove('hidden');
+  $('orderDetail').innerHTML = `
+    <div class="row"><h2 style="margin:0">طلب ${esc(o.id)}</h2><button class="light" onclick="$('orderDetail').classList.add('hidden')">إغلاق</button></div>
+    <p>العميل: <b>${esc(o.name)}</b> — ${esc(o.phone)}</p>
+    <p>العنوان: ${esc(o.address)}</p>
+    ${o.note ? `<p>ملاحظات: ${esc(o.note)}</p>` : ''}
+    <p>طريقة الدفع: ${esc(o.payment_method)}</p>
+    <table><thead><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead><tbody>${items}</tbody></table>
+    <p><b>الإجمالي: ${fmt(o.total)} ج.م</b></p>
+    <div>${actions.join(' ')}</div>
+    <div class="msg" id="detailMsg"></div>`;
+  $('orderDetail').scrollIntoView({ behavior: 'smooth' });
+}
+
+// يعدّل مخزون المنتجات حسب الطلب: delta = -1 للخصم، +1 للرجوع
+async function adjustStock(items, delta) {
+  for (const it of items) {
+    const { data, error } = await sb.from('products').select('qty').eq('id', it.id).maybeSingle();
+    if (error || !data) continue;
+    const newQty = Math.max(0, (data.qty || 0) + delta * it.qty);
+    await sb.from('products').update({ qty: newQty }).eq('id', it.id);
+  }
+}
+
+async function setStatus(id, next) {
+  const o = orders.find(x => x.id === id);
+  if (!o) return;
+  if (o.status === 'pending' && next === 'confirmed') await adjustStock(o.items, -1);
+  if (o.status === 'confirmed' && next === 'cancelled') await adjustStock(o.items, +1);
+  const { error } = await sb.from('web_orders').update({ status: next }).eq('id', id);
+  if (error) { say('detailMsg', 'حصلت مشكلة: ' + error.message); return; }
+  await loadOrders();
+  openOrder(id);
+}
+
+/* ---------- products ---------- */
+async function loadProducts() {
+  const { data, error } = await sb.from('products').select('*').order('id', { ascending: false });
+  if (error) { say('pListMsg', 'مش قادر أحمّل المنتجات: ' + error.message); return; }
+  products = data || [];
+  renderProducts();
+}
+
+function renderProducts() {
+  const q = $('pSearch').value.trim().toLowerCase();
+  const list = products.filter(p => !q || (p.name + ' ' + (p.category || '')).toLowerCase().includes(q));
+  $('pCount').textContent = products.length;
+  $('pEmpty').style.display = products.length ? 'none' : 'block';
+  $('pRows').innerHTML = list.map(p => {
+    const low = (p.qty || 0) <= (p.min_qty || 0);
+    return `<tr>
+      <td>${esc(p.name)}<div class="muted">${esc(p.color || '')} ${esc(p.size || '')}</div></td>
+      <td>${esc(p.category || '')}</td>
+      <td>${fmt(p.price)}</td>
+      <td class="${low ? 'low' : ''}">${p.qty ?? 0}</td>
+      <td>${p.active ? 'ظاهر' : 'مخفي'}</td>
+      <td>
+        <button class="light" onclick="editProduct(${p.id})">تعديل</button>
+        <button class="light" onclick="toggleProduct(${p.id})">${p.active ? 'إخفاء' : 'إظهار'}</button>
+        <button class="danger" onclick="deleteProduct(${p.id})">حذف</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function readProductForm() {
+  return {
+    name: $('fName').value.trim(),
+    category: $('fCat').value.trim(),
+    color: $('fColor').value.trim(),
+    size: $('fSize').value.trim(),
+    price: parseFloat($('fPrice').value),
+    cost: parseFloat($('fCost').value) || 0,
+    qty: parseInt($('fQty').value) || 0,
+    min_qty: parseInt($('fMin').value) || 0,
+    image_url: $('fImg').value.trim(),
+    video_url: $('fVideo').value.trim(),
+    active: $('fActive').checked
+  };
+}
+
+async function saveProduct() {
+  const d = readProductForm();
+  if (!d.name) { say('pMsg', 'اكتب اسم المنتج'); return; }
+  if (!(d.price >= 0)) { say('pMsg', 'اكتب سعر صحيح'); return; }
+  if (d.qty < 0) { say('pMsg', 'الكمية مينفعش تكون سالبة'); return; }
+
+  let error;
+  if (editingProductId) {
+    ({ error } = await sb.from('products').update(d).eq('id', editingProductId));
+  } else {
+    const id = Date.now();
+    const sku = 'KH-' + id.toString(36).toUpperCase();
+    ({ error } = await sb.from('products').insert({ id, sku, barcode: sku, ...d }));
+  }
+  if (error) { say('pMsg', 'حصلت مشكلة: ' + error.message); return; }
+  say('pMsg', editingProductId ? 'تم تعديل المنتج' : 'تمت إضافة المنتج');
+  resetProductForm(true);
+  loadProducts();
+}
+
+function editProduct(id) {
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  editingProductId = id;
+  $('fName').value = p.name || '';
+  $('fCat').value = p.category || '';
+  $('fColor').value = p.color || '';
+  $('fSize').value = p.size || '';
+  $('fPrice').value = p.price ?? '';
+  $('fCost').value = p.cost ?? '';
+  $('fQty').value = p.qty ?? 0;
+  $('fMin').value = p.min_qty ?? 0;
+  $('fImg').value = p.image_url || '';
+  $('fVideo').value = p.video_url || '';
+  $('fActive').checked = !!p.active;
+  $('pFormTitle').textContent = 'تعديل منتج';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function resetProductForm(keepMsg) {
+  editingProductId = null;
+  ['fName','fCat','fColor','fSize','fPrice','fCost','fImg','fVideo'].forEach(id => $(id).value = '');
+  $('fQty').value = 0;
+  $('fMin').value = 2;
+  $('fActive').checked = true;
+  $('pFormTitle').textContent = 'إضافة منتج جديد';
+  if (!keepMsg) say('pMsg', '');
+}
+
+async function toggleProduct(id) {
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  const { error } = await sb.from('products').update({ active: !p.active }).eq('id', id);
+  if (error) { say('pListMsg', 'حصلت مشكلة: ' + error.message); return; }
+  loadProducts();
+}
+
+async function deleteProduct(id) {
+  const p = products.find(x => x.id === id);
+  if (!p || !confirm('تحذف "' + p.name + '"؟')) return;
+  const { error } = await sb.from('products').delete().eq('id', id);
+  if (error) { say('pListMsg', 'حصلت مشكلة: ' + error.message); return; }
+  loadProducts();
+}
+
+/* ---------- settings ---------- */
+async function loadSettings() {
+  const { data, error } = await sb.from('settings').select('value').eq('key', 'payments').maybeSingle();
+  if (error) { say('sMsg', 'مش قادر أحمّل الإعدادات: ' + error.message); return; }
+  const v = (data && data.value) || {};
+  $('sInsta').value = v.instapay || '';
+  $('sVoda').value = v.vodafone || '';
+  $('sVodaOn').checked = !!v.vodafone_enabled;
+  $('sCod').checked = !!v.cod_enabled;
+  $('sWa').value = v.whatsapp || '';
+}
+
+async function savePayments() {
+  const wa = $('sWa').value.trim();
+  if (wa && !/^20[0-9]{10}$/.test(wa)) { say('sMsg', 'رقم الواتساب لازم يبدأ بـ 20 وبعده 10 أرقام'); return; }
+  const value = {
+    instapay: $('sInsta').value.trim(),
+    vodafone: $('sVoda').value.trim(),
+    vodafone_enabled: $('sVodaOn').checked,
+    cod_enabled: $('sCod').checked,
+    whatsapp: wa
+  };
+  const { error } = await sb.from('settings').upsert({ key: 'payments', value });
+  say('sMsg', error ? 'حصلت مشكلة: ' + error.message : 'تم الحفظ، المتجر هيتحدّث مع أول refresh');
+}
+
+/* ---------- coupons ---------- */
+async function loadCoupons() {
+  const { data, error } = await sb.from('coupons').select('*').order('code');
+  if (error) { say('cMsg', 'مش قادر أحمّل الكوبونات: ' + error.message); return; }
+  coupons = data || [];
+  $('couponRows').innerHTML = coupons.map((c, i) => `
+    <tr>
+      <td>${esc(c.code)}</td>
+      <td>${c.type === 'percent' ? c.value + '%' : Number(c.value).toFixed(2) + ' ج.م'}</td>
+      <td>${c.active ? 'فعال' : 'متوقف'}</td>
+      <td>
+        <button class="light" onclick="toggleCoupon(${i})">${c.active ? 'إيقاف' : 'تفعيل'}</button>
+        <button class="danger" onclick="deleteCoupon(${i})">حذف</button>
+      </td>
+    </tr>`).join('');
+  $('cEmpty').style.display = coupons.length ? 'none' : 'block';
+}
+
+async function addCoupon() {
+  const code = $('cCode').value.trim().toUpperCase();
+  const value = parseFloat($('cVal').value);
+  if (!code) { say('cMsg', 'اكتب الكود'); return; }
+  if (!(value > 0)) { say('cMsg', 'القيمة لازم تكون أكبر من صفر'); return; }
+  const { error } = await sb.from('coupons').insert({ code, type: $('cType').value, value, active: true });
+  if (error) { say('cMsg', error.code === '23505' ? 'الكود ده موجود قبل كده' : 'حصلت مشكلة: ' + error.message); return; }
+  $('cCode').value = '';
+  say('cMsg', 'تمت إضافة الكوبون');
+  loadCoupons();
+}
+
+async function toggleCoupon(i) {
+  const c = coupons[i];
+  const { error } = await sb.from('coupons').update({ active: !c.active }).eq('code', c.code);
+  if (error) { say('cMsg', 'حصلت مشكلة: ' + error.message); return; }
+  loadCoupons();
+}
+
+async function deleteCoupon(i) {
+  const c = coupons[i];
+  if (!confirm('تحذف الكوبون ' + c.code + '؟')) return;
+  const { error } = await sb.from('coupons').delete().eq('code', c.code);
+  if (error) { say('cMsg', 'حصلت مشكلة: ' + error.message); return; }
+  loadCoupons();
+}
+
+init();
+</script>
+</body>
+</html>
