@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>خرزه - الإعدادات والكوبونات</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  body { font-family: Tahoma, Arial, sans-serif; background: #faf6f8; margin: 0; padding: 16px; color: #333; font-size: 14px; }
+  h1 { color: #8b2252; font-size: 22px; margin: 0 0 10px; }
+  h2 { color: #8b2252; font-size: 16px; margin: 0 0 10px; }
+  .nav { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+  .nav a { background: #8b2252; color: #fff; text-decoration: none; padding: 8px 12px; border-radius: 6px; }
+  .nav a.on { background: #555; }
+  .card { background: #fff; border-radius: 10px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.08); margin-bottom: 14px; max-width: 760px; }
+  input, select { padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+  .field { margin-bottom: 10px; }
+  .field input, .field select { width: 100%; }
+  button { background: #8b2252; color: #fff; border: 0; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 14px; margin: 2px; }
+  button.light { background: #eee; color: #333; }
+  button.danger { background: #c0392b; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 6px; border-bottom: 1px solid #eee; text-align: right; }
+  .muted { color: #888; font-size: 12px; }
+  .msg { margin-top: 8px; font-size: 13px; color: #8b2252; min-height: 18px; }
+  .hidden { display: none; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="../">المتجر</a>
+  <a href="../pos/">نقطة البيع</a>
+  <a href="../products/">المنتجات</a>
+  <a href="../suppliers/">الموردين</a>
+  <a href="../dashboard/">لوحة التحكم</a>
+  <a href="./" class="on">الإعدادات والكوبونات</a>
+</nav>
+
+<h1>الإعدادات والكوبونات</h1>
+
+<div class="card" id="loginCard">
+  <h2>تسجيل الدخول للموظفين</h2>
+  <div class="field">الإيميل<br><input id="lEmail" type="email" style="width:100%"></div>
+  <div class="field">كلمة السر<br><input id="lPass" type="password" style="width:100%"></div>
+  <button onclick="login()">دخول</button>
+  <div class="msg" id="loginMsg"></div>
+</div>
+
+<div id="admin" class="hidden">
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <h2 style="margin:0">أرقام الدفع والطلبات</h2>
+      <button class="light" onclick="logout()">تسجيل خروج</button>
+    </div>
+    <div class="field" style="margin-top:10px">رقم انستاباي<br><input id="pInsta"></div>
+    <div class="field">رقم فودافون كاش<br><input id="pVoda"></div>
+    <div class="field"><label><input type="checkbox" id="pVodaOn"> تفعيل فودافون كاش في المتجر</label></div>
+    <div class="field"><label><input type="checkbox" id="pCod"> تفعيل الدفع عند الاستلام في المتجر</label></div>
+    <div class="field">رقم الواتساب لاستقبال الطلبات (بالكود الدولي بدون +)<br><input id="pWa" placeholder="201xxxxxxxxx"></div>
+    <button onclick="savePayments()">حفظ أرقام الدفع</button>
+    <div class="msg" id="payMsg"></div>
+  </div>
+
+  <div class="card">
+    <h2>الكوبونات</h2>
+    <div class="row">
+      <div class="field"><div>الكود</div><input id="cCode" placeholder="مثلاً SUMMER10"></div>
+      <div class="field"><div>النوع</div>
+        <select id="cType"><option value="percent">نسبة %</option><option value="fixed">مبلغ ج.م</option></select>
+      </div>
+      <div class="field"><div>القيمة</div><input id="cVal" type="number" min="0" step="0.01" value="10" style="width:100px"></div>
+      <div><button onclick="addCoupon()">إضافة الكوبون</button></div>
+    </div>
+    <table style="margin-top:10px">
+      <thead><tr><th>الكود</th><th>الخصم</th><th>الحالة</th><th></th></tr></thead>
+      <tbody id="couponRows"></tbody>
+    </table>
+    <p class="muted" id="couponEmpty" style="display:none">مفيش كوبونات لسه.</p>
+    <div class="msg" id="couponMsg"></div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://igtgqlhuumfqxtbzgnuq.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_zaFIX1_KmXt7LJnaGZpmjQ_7uBg3EkY';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let coupons = [];
+
+const $ = id => document.getElementById(id);
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function say(id, text) { $(id).textContent = text || ''; }
+
+function showAdmin() {
+  $('loginCard').classList.add('hidden');
+  $('admin').classList.remove('hidden');
+  loadPayments();
+  loadCoupons();
+}
+function showLogin() {
+  $('loginCard').classList.remove('hidden');
+  $('admin').classList.add('hidden');
+}
+
+async function init() {
+  const { data } = await sb.auth.getSession();
+  if (data.session) showAdmin(); else showLogin();
+}
+
+async function login() {
+  say('loginMsg', 'جاري الدخول...');
+  const { error } = await sb.auth.signInWithPassword({
+    email: $('lEmail').value.trim(),
+    password: $('lPass').value
+  });
+  if (error) { say('loginMsg', 'الإيميل أو كلمة السر غلط'); return; }
+  $('lPass').value = '';
+  say('loginMsg', '');
+  showAdmin();
+}
+
+async function logout() {
+  await sb.auth.signOut();
+  showLogin();
+}
+
+/* ---------- payments ---------- */
+async function loadPayments() {
+  const { data, error } = await sb.from('settings').select('value').eq('key', 'payments').maybeSingle();
+  if (error) { say('payMsg', 'مش قادر أحمّل الإعدادات: ' + error.message); return; }
+  const v = (data && data.value) || {};
+  $('pInsta').value = v.instapay || '';
+  $('pVoda').value = v.vodafone || '';
+  $('pVodaOn').checked = !!v.vodafone_enabled;
+  $('pCod').checked = !!v.cod_enabled;
+  $('pWa').value = v.whatsapp || '';
+}
+
+async function savePayments() {
+  const wa = $('pWa').value.trim();
+  if (wa && !/^20[0-9]{10}$/.test(wa)) { say('payMsg', 'رقم الواتساب لازم يبدأ بـ 20 وبعده 10 أرقام'); return; }
+  const value = {
+    instapay: $('pInsta').value.trim(),
+    vodafone: $('pVoda').value.trim(),
+    vodafone_enabled: $('pVodaOn').checked,
+    cod_enabled: $('pCod').checked,
+    whatsapp: wa
+  };
+  const { error } = await sb.from('settings').upsert({ key: 'payments', value });
+  say('payMsg', error ? 'حصلت مشكلة: ' + error.message : 'تم الحفظ، المتجر هيتحدّث مع أول refresh');
+}
+
+/* ---------- coupons ---------- */
+async function loadCoupons() {
+  const { data, error } = await sb.from('coupons').select('*').order('code');
+  if (error) { say('couponMsg', 'مش قادر أحمّل الكوبونات: ' + error.message); return; }
+  coupons = data || [];
+  renderCoupons();
+}
+
+function renderCoupons() {
+  $('couponRows').innerHTML = coupons.map((c, i) => `
+    <tr>
+      <td>${esc(c.code)}</td>
+      <td>${c.type === 'percent' ? c.value + '%' : Number(c.value).toFixed(2) + ' ج.م'}</td>
+      <td>${c.active ? 'فعال' : 'متوقف'}</td>
+      <td>
+        <button class="light" onclick="toggleCoupon(${i})">${c.active ? 'إيقاف' : 'تفعيل'}</button>
+        <button class="danger" onclick="deleteCoupon(${i})">حذف</button>
+      </td>
+    </tr>`).join('');
+  $('couponEmpty').style.display = coupons.length ? 'none' : 'block';
+}
+
+async function addCoupon() {
+  const code = $('cCode').value.trim().toUpperCase();
+  const value = parseFloat($('cVal').value);
+  if (!code) { say('couponMsg', 'اكتب الكود'); return; }
+  if (!(value > 0)) { say('couponMsg', 'القيمة لازم تكون أكبر من صفر'); return; }
+  const { error } = await sb.from('coupons').insert({
+    code, type: $('cType').value, value, active: true
+  });
+  if (error) { say('couponMsg', error.code === '23505' ? 'الكود ده موجود قبل كده' : 'حصلت مشكلة: ' + error.message); return; }
+  $('cCode').value = '';
+  say('couponMsg', 'تمت إضافة الكوبون');
+  loadCoupons();
+}
+
+async function toggleCoupon(i) {
+  const c = coupons[i];
+  const { error } = await sb.from('coupons').update({ active: !c.active }).eq('code', c.code);
+  if (error) { say('couponMsg', 'حصلت مشكلة: ' + error.message); return; }
+  loadCoupons();
+}
+
+async function deleteCoupon(i) {
+  const c = coupons[i];
+  if (!confirm('تحذف الكوبون ' + c.code + '؟')) return;
+  const { error } = await sb.from('coupons').delete().eq('code', c.code);
+  if (error) { say('couponMsg', 'حصلت مشكلة: ' + error.message); return; }
+  loadCoupons();
+}
+
+init();
+</script>
+</body>
+</html>
