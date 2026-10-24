@@ -3,333 +3,1259 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>خرزه - المتجر</title>
+<title>خرزه - لوحة الإدارة</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
-  :root { --brand: #8b2252; --soft: #faf6f8; --ink: #333; }
-  * { box-sizing: border-box; }
-  body { font-family: Tahoma, Arial, sans-serif; background: var(--soft); margin: 0; color: var(--ink); }
-  header { background: #000; color: #fff; padding: 20px 16px; text-align: center; }
-  header .logo { width: min(420px, 80%); height: auto; display: block; margin: 0 auto; }
-  header p { margin: 4px 0 0; font-size: 13px; opacity: .9; }
-  main { max-width: 1000px; margin: 0 auto; padding: 16px; }
-  .bar { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 14px; }
-  select, input, textarea { padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; font-family: inherit; width: 100%; }
-  .cartBtn { background: var(--brand); color: #fff; border: 0; padding: 10px 16px; border-radius: 8px; font-size: 15px; cursor: pointer; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
-  .prod { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 6px rgba(0,0,0,.08); display: flex; flex-direction: column; }
-  .media { width: 100%; height: 300px; background: #000; display: flex; align-items: center; justify-content: center; }
-  .media iframe, .media video { width: 100%; height: 100%; border: 0; object-fit: cover; }
-  .media img { width: 100%; height: 100%; object-fit: cover; }
-  .noimg { background: #000; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 20px; }
-  .noimg img { width: 100%; height: 100%; object-fit: contain; }
-  .pbody { padding: 12px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
-  .pname { font-weight: bold; font-size: 15px; }
-  .pmeta { font-size: 12px; color: #888; }
-  .pprice { color: var(--brand); font-weight: bold; font-size: 16px; }
-  .order { background: #25D366; color: #fff; border: 0; padding: 11px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; margin-top: 4px; }
-  .order:disabled, .add:disabled { background: #ccc; cursor: not-allowed; }
-  .add { background: #fff; color: var(--brand); border: 1px solid var(--brand); padding: 8px; border-radius: 8px; cursor: pointer; font-size: 14px; }
-  .card { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 1px 6px rgba(0,0,0,.08); margin-top: 18px; }
-  h2 { color: var(--brand); font-size: 18px; margin: 0 0 12px; }
-  .line { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid #eee; align-items: center; }
-  .qty button { background: #eee; border: 0; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; font-size: 16px; }
-  .tot { font-size: 20px; font-weight: bold; color: var(--brand); margin-top: 10px; }
-  .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
-  .fields label { font-size: 14px; display: block; }
-  .pay { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
-  .pay label { background: #f7eef3; padding: 10px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
-  .info { background: #fff8e1; border-radius: 8px; padding: 10px; margin-top: 10px; font-size: 14px; }
-  .send { width: 100%; background: #25D366; color: #fff; border: 0; padding: 14px; border-radius: 10px; font-size: 17px; cursor: pointer; margin-top: 14px; }
-  .send:disabled { background: #ccc; cursor: not-allowed; }
-  .muted { color: #888; font-size: 13px; }
-  .done { background: #d5f5e3; border-radius: 10px; padding: 14px; margin-top: 14px; }
+  body { font-family: Tahoma, Arial, sans-serif; background: #faf6f8; margin: 0; padding: 16px; color: #333; font-size: 14px; }
+  h1 { color: #8b2252; font-size: 22px; margin: 0 0 12px; }
+  h2 { color: #8b2252; font-size: 16px; margin: 0 0 10px; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+  .tabs button { background: #eee; color: #333; }
+  .tabs button.on { background: #8b2252; color: #fff; }
+  .card { background: #fff; border-radius: 10px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.08); margin-bottom: 14px; }
+  .field { margin-bottom: 10px; }
+  .field input, .field select, .field textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; box-sizing: border-box; font-family: inherit; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+  button { background: #8b2252; color: #fff; border: 0; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; margin: 2px; }
+  button.light { background: #eee; color: #333; }
+  button.danger { background: #c0392b; }
+  button.ok { background: #27ae60; }
+  input.inline { padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 6px; border-bottom: 1px solid #eee; text-align: right; vertical-align: middle; }
+  .muted { color: #888; font-size: 12px; }
+  .msg { margin-top: 8px; font-size: 13px; color: #8b2252; min-height: 18px; }
+  .low { color: #c0392b; font-weight: bold; }
+  .pill { display: inline-block; padding: 3px 9px; border-radius: 12px; background: #eee; font-size: 12px; }
+  .s-pending { background: #fcf3cf; }
+  .s-confirmed { background: #d6eaf8; }
+  .s-shipped { background: #d5f5e3; }
+  .s-cancelled { background: #fadbd8; }
   .hidden { display: none; }
-  footer { text-align: center; color: #888; font-size: 12px; padding: 24px; }
+  #printArea { display: none; }
+  @page { size: 80mm auto; margin: 2mm; }
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { display: block; position: absolute; left: 0; top: 0; width: 72mm; font-family: Arial, sans-serif; font-size: 12px; }
+  }
+  .rc-line { display: flex; justify-content: space-between; }
+  .rc-hr { border-top: 1px dashed #000; margin: 4px 0; }
+  .tot { font-size: 20px; font-weight: bold; color: #8b2252; margin-top: 8px; }
 </style>
 </head>
 <body>
 
-<header>
-  <img class="logo" src="logo.jpg" alt="خرزه براند">
-  <p>شنط سواريه، شنط موبايل، أحزمة، كفرات، Breloques، فوانيس وتوزيعات</p>
-</header>
+<h1>خرزه - لوحة الإدارة</h1>
 
-<main>
-  <div class="bar">
-    <select id="catFilter" style="max-width:240px" onchange="renderProducts()">
-      <option value="">كل الفئات</option>
-    </select>
-    <button class="cartBtn" onclick="document.getElementById('checkout').scrollIntoView({behavior:'smooth'})">
-      السلة (<span id="cartCount">0</span>)
-    </button>
+<div class="card" id="loginCard">
+  <h2>تسجيل الدخول للموظفين</h2>
+  <div class="field">الإيميل<br><input id="lEmail" type="email"></div>
+  <div class="field">كلمة السر<br><input id="lPass" type="password"></div>
+  <button onclick="login()">دخول</button>
+  <div class="msg" id="loginMsg"></div>
+</div>
+
+<div id="admin" class="hidden">
+  <div class="row" style="margin-bottom:12px">
+    <div class="tabs">
+      <button id="tabPos" class="on" onclick="showTab('pos')">نقطة البيع</button>
+      <button id="tabOrders" class="light" onclick="showTab('orders')">طلبات المتجر</button>
+      <button id="tabProducts" class="light" onclick="showTab('products')">المنتجات</button>
+      <button id="tabSettings" class="light" onclick="showTab('settings')">أرقام الدفع</button>
+      <button id="tabCoupons" class="light" onclick="showTab('coupons')">الكوبونات</button>
+      <button id="tabCustomers" class="light" onclick="showTab('customers')">العملاء</button>
+      <button id="tabSuppliers" class="light" onclick="showTab('suppliers')">الموردين والمشتريات</button>
+    </div>
+    <button class="light" onclick="logout()">تسجيل خروج</button>
   </div>
 
-  <div class="grid" id="products"><p class="muted">جاري تحميل المنتجات...</p></div>
+  <!-- ===== CUSTOMERS ===== -->
+  <div id="customersTab" class="hidden">
+    <div class="card">
+      <h2 id="cuTitle">إضافة عميل</h2>
+      <div class="grid">
+        <div class="field">الاسم *<input id="cuName"></div>
+        <div class="field">التليفون *<input id="cuPhone" inputmode="tel"></div>
+        <div class="field">العنوان<input id="cuAddr"></div>
+        <div class="field">ملاحظات<input id="cuNote"></div>
+      </div>
+      <button class="ok" onclick="saveCustomer()">حفظ العميل</button>
+      <button class="light" onclick="resetCustomerForm()">مسح</button>
+      <div class="msg" id="cuMsg"></div>
+    </div>
+    <div class="card">
+      <div class="row" style="margin-bottom:10px">
+        <h2 style="margin:0">العملاء (<span id="cuCount">0</span>)</h2>
+        <input id="cuSearch" class="inline" placeholder="ابحث بالاسم أو التليفون" style="width:260px" oninput="renderCustomers()">
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>الاسم</th><th>التليفون</th><th>العنوان</th><th>عدد الطلبات</th><th>إجمالي الشراء</th><th></th></tr></thead>
+          <tbody id="cuRows"></tbody>
+        </table>
+      </div>
+      <div class="msg" id="cuListMsg"></div>
+    </div>
+  </div>
 
-  <section class="card" id="checkout">
-    <h2>سلة الشراء</h2>
-    <div id="cartLines"></div>
-    <p id="cartEmpty" class="muted">السلة فاضية، اختار المنتجات اللي عاوزها.</p>
-    <div class="tot">الإجمالي: <span id="cartTotal">0.00</span> ج.م</div>
-  </section>
-
-  <section class="card" id="orderForm">
-    <h2>بيانات الطلب</h2>
-    <div class="fields">
-      <label>الاسم *<input id="cName" placeholder="اسمك"></label>
-      <label>رقم التليفون *<input id="cPhone" placeholder="01xxxxxxxxx" inputmode="tel"></label>
-      <label style="grid-column: 1 / -1">العنوان بالتفصيل *<textarea id="cAddr" rows="2" placeholder="المحافظة، المنطقة، الشارع، رقم العمارة"></textarea></label>
-      <label style="grid-column: 1 / -1">ملاحظات (اختياري)<input id="cNote" placeholder="مثلاً: لون معين أو ميعاد مناسب"></label>
+  <!-- ===== SUPPLIERS ===== -->
+  <div id="suppliersTab" class="hidden">
+    <div class="card">
+      <h2>إضافة مورد</h2>
+      <div class="grid">
+        <div class="field">الاسم *<input id="suName"></div>
+        <div class="field">التليفون<input id="suPhone"></div>
+        <div class="field">العنوان<input id="suAddr"></div>
+        <div class="field">شروط الدفع<select id="suTerms"><option>نقدي عند الاستلام</option><option>15 يوم</option><option>30 يوم</option><option>60 يوم</option><option>أخرى</option></select></div>
+      </div>
+      <button class="ok" onclick="saveSupplier()">حفظ المورد</button>
+      <div class="msg" id="suMsg"></div>
+      <div style="overflow-x:auto;margin-top:10px">
+        <table>
+          <thead><tr><th>الاسم</th><th>التليفون</th><th>العنوان</th><th>الشروط</th><th></th></tr></thead>
+          <tbody id="suRows"></tbody>
+        </table>
+      </div>
     </div>
 
-    <h2 style="margin-top:18px">طريقة الدفع</h2>
-    <div class="pay" id="payOpts"></div>
-    <div id="payInfo" class="info hidden"></div>
+    <div class="card">
+      <h2>أمر شراء جديد</h2>
+      <div class="row" style="justify-content:flex-start;gap:8px">
+        <select id="poSup" class="inline"></select>
+        <select id="poProd" class="inline" style="min-width:240px"></select>
+        <input id="poQty" class="inline" type="number" min="1" step="1" value="1" style="width:90px" placeholder="الكمية">
+        <input id="poCost" class="inline" type="number" min="0" step="0.01" value="0" style="width:120px" placeholder="سعر التكلفة">
+        <button onclick="addPurchaseLine()">إضافة للأمر</button>
+      </div>
+      <table style="margin-top:10px">
+        <thead><tr><th>المنتج</th><th>الكمية</th><th>التكلفة</th><th>الإجمالي</th><th></th></tr></thead>
+        <tbody id="poDraft"></tbody>
+      </table>
+      <div class="tot" id="poDraftTotal">الإجمالي: 0.00 ج.م</div>
+      <button class="ok" onclick="savePurchase()">حفظ أمر الشراء</button>
+      <div class="msg" id="poMsg"></div>
+    </div>
 
-    <button class="send" id="sendBtn" onclick="sendOrder()" disabled>ابعت الطلب</button>
-    <p class="muted" style="text-align:center">هيتسجل طلبك وهيتفتح الواتساب برسالة جاهزة. لو دفعت إلكترونياً، ابعت صورة الإيصال في نفس المحادثة.</p>
+    <div class="card">
+      <h2>أوامر الشراء</h2>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>التاريخ</th><th>المورد</th><th>الإجمالي</th><th>الحالة</th><th></th></tr></thead>
+          <tbody id="poRows"></tbody>
+        </table>
+      </div>
+      <p class="muted" id="poEmpty" style="display:none">مفيش أوامر شراء لسه.</p>
+    </div>
 
-    <div id="done" class="done hidden"></div>
-  </section>
-</main>
+    <div class="card">
+      <h2>المستحقات للموردين</h2>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>المورد</th><th>إجمالي المستلم</th><th>المدفوع</th><th>المتبقي</th></tr></thead>
+          <tbody id="spRows"></tbody>
+        </table>
+      </div>
+      <div class="row" style="justify-content:flex-start;gap:8px;margin-top:12px">
+        <select id="spSup" class="inline"></select>
+        <input id="spAmt" class="inline" type="number" min="0" step="0.01" value="0" style="width:120px">
+        <input id="spNote" class="inline" placeholder="ملاحظة أو رقم التحويل">
+        <button class="ok" onclick="recordSupplierPayment()">تسجيل دفعة</button>
+      </div>
+      <div class="msg" id="spMsg"></div>
+    </div>
+  </div>
 
-<footer>خرزه © <span id="year"></span></footer>
+  <!-- ===== POS ===== -->
+  <div id="posTab">
+    <div class="card" id="shiftBar"></div>
+    <div class="row" style="align-items:flex-start">
+      <div style="flex:1;min-width:300px">
+        <div class="card">
+          <h2>إضافة منتج</h2>
+          <input id="posScan" class="inline" style="width:100%" placeholder="امسح الباركود أو اكتب الاسم ثم Enter" oninput="posSearch()" onkeydown="posScanKey(event)">
+          <div id="posResults" style="margin-top:8px"></div>
+        </div>
+        <div class="card">
+          <h2>السلة</h2>
+          <table>
+            <thead><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>خصم</th><th>الإجمالي</th><th></th></tr></thead>
+            <tbody id="posCart"></tbody>
+          </table>
+          <p class="muted" id="posCartEmpty">السلة فاضية</p>
+        </div>
+      </div>
+      <div style="flex:1;min-width:300px">
+        <div class="card">
+          <h2>خصم الفاتورة والكوبون</h2>
+          <select id="posInvType" class="inline" onchange="posTotals()"><option value="percent">%</option><option value="fixed">ج.م</option></select>
+          <input id="posInvVal" class="inline" type="number" min="0" step="0.01" value="0" oninput="posTotals()" style="width:110px">
+          <div style="margin-top:8px">
+            <input id="posCoupon" class="inline" placeholder="كود الكوبون">
+            <button class="light" onclick="posApplyCoupon()">تطبيق</button>
+            <button class="light" onclick="posClearCoupon()">إلغاء</button>
+          </div>
+          <div id="posCouponInfo" class="muted" style="margin-top:4px"></div>
+        </div>
+        <div class="card">
+          <div>قبل الخصم: <span id="posSub">0.00</span></div>
+          <div>الخصم: <span id="posDisc">0.00</span></div>
+          <div class="tot">المطلوب: <span id="posTotal">0.00</span> ج.م</div>
+        </div>
+        <div class="card">
+          <h2>الدفع</h2>
+          <div style="margin-bottom:8px">العميل (اختياري)<br><select id="posCustomer" class="inline" style="width:100%"></select></div>
+          <div style="margin-bottom:8px">
+            <button class="light" onclick="posPayAll('cash')">كله كاش</button>
+            <button class="light" onclick="posPayAll('insta')">كله انستاباي</button>
+            <button class="light" onclick="posPayAll('voda')">كله فودافون</button>
+          </div>
+          <table>
+            <tr><td>كاش</td><td><input id="posCash" class="inline" type="number" min="0" step="0.01" value="0" oninput="posTotals()" style="width:110px"></td><td></td></tr>
+            <tr><td>انستاباي</td><td><input id="posInsta" class="inline" type="number" min="0" step="0.01" value="0" oninput="posTotals()" style="width:110px"></td><td><input id="posRInsta" class="inline" placeholder="رقم العملية"></td></tr>
+            <tr><td>فودافون كاش</td><td><input id="posVoda" class="inline" type="number" min="0" step="0.01" value="0" oninput="posTotals()" style="width:110px"></td><td><input id="posRVoda" class="inline" placeholder="رقم العملية"></td></tr>
+          </table>
+          <div id="posPayInfo" class="muted" style="margin-top:6px"></div>
+          <button class="ok" id="posSellBtn" style="width:100%;padding:14px;font-size:17px;margin-top:10px" onclick="posCheckout()">تأكيد البيع وطباعة الفاتورة</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row">
+        <h2 style="margin:0">مبيعات اليوم (<span id="posTodayCount">0</span>)</h2>
+        <span class="muted" id="posTodayTotal"></span>
+      </div>
+      <table style="margin-top:8px">
+        <thead><tr><th>الوقت</th><th>الإجمالي</th><th>الدفع</th><th></th></tr></thead>
+        <tbody id="posToday"></tbody>
+      </table>
+    </div>
+    <div class="msg" id="posMsg"></div>
+  </div>
 
+  <!-- ===== ORDERS ===== -->
+  <div id="ordersTab">
+    <div class="card">
+      <div class="row" style="margin-bottom:10px">
+        <h2 style="margin:0">طلبات المتجر (<span id="orderCount">0</span>)</h2>
+        <select id="orderFilter" class="inline" onchange="renderOrders()">
+          <option value="">كل الحالات</option>
+          <option value="pending">بانتظار التأكيد</option>
+          <option value="confirmed">مؤكد</option>
+          <option value="shipped">اتشحن</option>
+          <option value="cancelled">ملغي</option>
+        </select>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>الرقم</th><th>التاريخ</th><th>العميل</th><th>التليفون</th><th>الإجمالي</th><th>الدفع</th><th>الحالة</th><th></th></tr></thead>
+          <tbody id="orderRows"></tbody>
+        </table>
+      </div>
+      <p class="muted" id="orderEmpty" style="display:none">مفيش طلبات لسه.</p>
+      <div class="msg" id="orderMsg"></div>
+    </div>
+    <div class="card hidden" id="orderDetail"></div>
+  </div>
+
+  <!-- ===== PRODUCTS ===== -->
+  <div id="productsTab" class="hidden">
+    <div class="card">
+      <h2 id="pFormTitle">إضافة منتج جديد</h2>
+      <div class="grid">
+        <div class="field">الاسم *<input id="fName"></div>
+        <div class="field">الفئة<input id="fCat" list="catList" placeholder="اختار أو اكتب"></div>
+        <datalist id="catList">
+          <option>شنط سواريه</option><option>شنط موبايل</option><option>شنط خروجة</option>
+          <option>شنط بالخرز</option><option>أحزمة موبايل</option><option>كفرات موبايل</option>
+          <option>Breloques</option><option>فوانيس</option><option>توزيعات</option><option>أخرى</option>
+        </datalist>
+        <div class="field">اللون<input id="fColor"></div>
+        <div class="field">المقاس<input id="fSize"></div>
+        <div class="field">سعر البيع *<input id="fPrice" type="number" min="0" step="0.01"></div>
+        <div class="field">التكلفة<input id="fCost" type="number" min="0" step="0.01"></div>
+        <div class="field">الكمية المتاحة<input id="fQty" type="number" min="0" step="1" value="0"></div>
+        <div class="field">حد التنبيه<input id="fMin" type="number" min="0" step="1" value="2"></div>
+        <div class="field">رابط الصورة<input id="fImg" placeholder="اختياري"></div>
+        <div class="field">رابط الفيديو (mp4)<input id="fVideo" placeholder="اختياري"></div>
+      </div>
+      <div class="field"><label><input type="checkbox" id="fActive" checked> ظاهر في المتجر</label></div>
+      <button class="ok" onclick="saveProduct()">حفظ المنتج</button>
+      <button class="light" onclick="resetProductForm()">مسح الخانات</button>
+      <div class="msg" id="pMsg"></div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="margin-bottom:10px">
+        <h2 style="margin:0">قائمة المنتجات (<span id="pCount">0</span>)</h2>
+        <input id="pSearch" class="inline" placeholder="ابحث بالاسم أو الفئة" style="width:240px" oninput="renderProducts()">
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>الاسم</th><th>الفئة</th><th>السعر</th><th>الكمية</th><th>الحالة</th><th></th></tr></thead>
+          <tbody id="pRows"></tbody>
+        </table>
+      </div>
+      <p class="muted" id="pEmpty" style="display:none">مفيش منتجات لسه.</p>
+      <div class="msg" id="pListMsg"></div>
+    </div>
+  </div>
+
+  <!-- ===== SETTINGS ===== -->
+  <div id="settingsTab" class="hidden">
+    <div class="card" style="max-width:720px">
+      <h2>أرقام الدفع والطلبات</h2>
+      <div class="field">رقم انستاباي<input id="sInsta"></div>
+      <div class="field">رقم فودافون كاش<input id="sVoda"></div>
+      <div class="field"><label><input type="checkbox" id="sVodaOn"> تفعيل فودافون كاش في المتجر</label></div>
+      <div class="field"><label><input type="checkbox" id="sCod"> تفعيل الدفع عند الاستلام في المتجر</label></div>
+      <div class="field">رقم الواتساب لاستقبال الطلبات (201xxxxxxxxx)<input id="sWa"></div>
+      <button class="ok" onclick="savePayments()">حفظ</button>
+      <div class="msg" id="sMsg"></div>
+    </div>
+  </div>
+
+  <!-- ===== COUPONS ===== -->
+  <div id="couponsTab" class="hidden">
+    <div class="card">
+      <h2>الكوبونات</h2>
+      <div class="row" style="justify-content:flex-start;gap:10px">
+        <input id="cCode" class="inline" placeholder="الكود مثلاً SUMMER10">
+        <select id="cType" class="inline"><option value="percent">نسبة %</option><option value="fixed">مبلغ ج.م</option></select>
+        <input id="cVal" class="inline" type="number" min="0" step="0.01" value="10" style="width:100px">
+        <button onclick="addCoupon()">إضافة</button>
+      </div>
+      <table style="margin-top:12px">
+        <thead><tr><th>الكود</th><th>الخصم</th><th>الحالة</th><th></th></tr></thead>
+        <tbody id="couponRows"></tbody>
+      </table>
+      <p class="muted" id="cEmpty" style="display:none">مفيش كوبونات لسه.</p>
+      <div class="msg" id="cMsg"></div>
+    </div>
+  </div>
+</div>
+
+<div id="printArea"></div>
 <script>
 const SUPABASE_URL = 'https://igtgqlhuumfqxtbzgnuq.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_zaFIX1_KmXt7LJnaGZpmjQ_7uBg3EkY';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-const BRAND = 'خرزه';
-const CURRENCY = 'ج.م';
 
-let products = [];
-let payments = {};
-let cart = [];
+const $ = id => document.getElementById(id);
+const STATUS_LABEL = { pending: 'بانتظار التأكيد', confirmed: 'مؤكد', shipped: 'اتشحن', cancelled: 'ملغي' };
+let products = [], orders = [], coupons = [], editingProductId = null;
 
-function fmt(n) { return (Math.round((n || 0) * 100) / 100).toFixed(2); }
 function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function findP(id) { return products.find(p => String(p.id) === String(id)); }
-function cartTotal() { return cart.reduce((s, l) => { const p = findP(l.id); return s + (p ? p.price * l.qty : 0); }, 0); }
+function fmt(n) { return (Math.round((n || 0) * 100) / 100).toFixed(2); }
+function say(id, t) { $(id).textContent = t || ''; }
 
+/* ---------- session ---------- */
 async function init() {
-  const [pr, sr] = await Promise.all([
-    sb.from('products').select('*').eq('active', true).order('name'),
-    sb.from('settings').select('value').eq('key', 'payments').maybeSingle()
-  ]);
-  if (pr.error || sr.error) {
-    console.error(pr.error || sr.error);
-    document.getElementById('products').innerHTML = '<p class="muted">مش قادر أحمّل المنتجات دلوقتي، جرّب تعمل refresh بعد شوية.</p>';
-    return;
+  const { data } = await sb.auth.getSession();
+  if (data.session) showAdmin(); else showLogin();
+}
+function showAdmin() {
+  $('loginCard').classList.add('hidden');
+  $('admin').classList.remove('hidden');
+  showTab('pos');
+}
+function showLogin() {
+  $('loginCard').classList.remove('hidden');
+  $('admin').classList.add('hidden');
+}
+async function login() {
+  say('loginMsg', 'جاري الدخول...');
+  const { error } = await sb.auth.signInWithPassword({ email: $('lEmail').value.trim(), password: $('lPass').value });
+  if (error) { say('loginMsg', 'الإيميل أو كلمة السر غلط'); return; }
+  $('lPass').value = '';
+  say('loginMsg', '');
+  showAdmin();
+}
+async function logout() {
+  await sb.auth.signOut();
+  showLogin();
+}
+
+/* ---------- tabs ---------- */
+function showTab(name) {
+  const map = { pos: 'posTab', orders: 'ordersTab', products: 'productsTab', settings: 'settingsTab', coupons: 'couponsTab', customers: 'customersTab', suppliers: 'suppliersTab' };
+  Object.keys(map).forEach(k => {
+    $(map[k]).classList.toggle('hidden', k !== name);
+    $('tab' + k.charAt(0).toUpperCase() + k.slice(1)).className = k === name ? 'on' : 'light';
+  });
+  if (name === 'pos') initPos();
+  if (name === 'customers') loadCustomers();
+  if (name === 'suppliers') loadSuppliersAll();
+  if (name === 'orders') loadOrders();
+  if (name === 'products') loadProducts();
+  if (name === 'settings') loadSettings();
+  if (name === 'coupons') loadCoupons();
+}
+
+/* ---------- orders ---------- */
+async function loadOrders() {
+  const { data, error } = await sb.from('web_orders').select('*').order('created_at', { ascending: false }).limit(300);
+  if (error) { say('orderMsg', 'مش قادر أحمّل الطلبات: ' + error.message); return; }
+  orders = data || [];
+  renderOrders();
+}
+
+function renderOrders() {
+  const f = $('orderFilter').value;
+  const list = orders.filter(o => !f || o.status === f);
+  $('orderCount').textContent = orders.length;
+  $('orderEmpty').style.display = orders.length ? 'none' : 'block';
+  $('orderRows').innerHTML = list.map(o => `
+    <tr class="s-${esc(o.status)}">
+      <td>${esc(o.id)}</td>
+      <td>${new Date(o.created_at).toLocaleString('ar-EG')}</td>
+      <td>${esc(o.name)}</td>
+      <td>${esc(o.phone)}</td>
+      <td>${fmt(o.total)}</td>
+      <td>${esc(o.payment_method)}</td>
+      <td><span class="pill">${STATUS_LABEL[o.status] || esc(o.status)}</span></td>
+      <td><button class="light" onclick="openOrder('${esc(o.id)}')">تفاصيل</button></td>
+    </tr>`).join('');
+}
+
+function openOrder(id) {
+  const o = orders.find(x => x.id === id);
+  if (!o) return;
+  const items = (o.items || []).map(i =>
+    `<tr><td>${esc(i.name)} ${esc(i.color || '')}</td><td>${i.qty}</td><td>${fmt(i.price)}</td><td>${fmt(i.lineTotal)}</td></tr>`).join('');
+  const actions = [];
+  if (o.status === 'pending') actions.push(`<button class="ok" onclick="setStatus('${esc(o.id)}','confirmed')">تأكيد الدفع وخصم المخزون</button>`);
+  if (o.status === 'confirmed') actions.push(`<button onclick="setStatus('${esc(o.id)}','shipped')">تم الشحن</button>`);
+  if (o.status !== 'cancelled' && o.status !== 'shipped') actions.push(`<button class="danger" onclick="setStatus('${esc(o.id)}','cancelled')">إلغاء الطلب</button>`);
+
+  $('orderDetail').classList.remove('hidden');
+  $('orderDetail').innerHTML = `
+    <div class="row"><h2 style="margin:0">طلب ${esc(o.id)}</h2><button class="light" onclick="$('orderDetail').classList.add('hidden')">إغلاق</button></div>
+    <p>العميل: <b>${esc(o.name)}</b> — ${esc(o.phone)}</p>
+    <p>العنوان: ${esc(o.address)}</p>
+    ${o.note ? `<p>ملاحظات: ${esc(o.note)}</p>` : ''}
+    <p>طريقة الدفع: ${esc(o.payment_method)}</p>
+    <table><thead><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead><tbody>${items}</tbody></table>
+    <p><b>الإجمالي: ${fmt(o.total)} ج.م</b></p>
+    <div>${actions.join(' ')}</div>
+    <div class="msg" id="detailMsg"></div>`;
+  $('orderDetail').scrollIntoView({ behavior: 'smooth' });
+}
+
+// يعدّل مخزون المنتجات حسب الطلب: delta = -1 للخصم، +1 للرجوع
+async function adjustStock(items, delta) {
+  for (const it of items) {
+    const { data, error } = await sb.from('products').select('qty').eq('id', it.id).maybeSingle();
+    if (error || !data) continue;
+    const newQty = Math.max(0, (data.qty || 0) + delta * it.qty);
+    await sb.from('products').update({ qty: newQty }).eq('id', it.id);
   }
-  products = pr.data || [];
-  payments = (sr.data && sr.data.value) || {};
-  initCategories();
+}
+
+async function setStatus(id, next) {
+  const o = orders.find(x => x.id === id);
+  if (!o) return;
+  if (o.status === 'pending' && next === 'confirmed') await adjustStock(o.items, -1);
+  if (o.status === 'confirmed' && next === 'cancelled') await adjustStock(o.items, +1);
+  const { error } = await sb.from('web_orders').update({ status: next }).eq('id', id);
+  if (error) { say('detailMsg', 'حصلت مشكلة: ' + error.message); return; }
+  await loadOrders();
+  openOrder(id);
+}
+
+/* ---------- products ---------- */
+async function loadProducts() {
+  const { data, error } = await sb.from('products').select('*').order('id', { ascending: false });
+  if (error) { say('pListMsg', 'مش قادر أحمّل المنتجات: ' + error.message); return; }
+  products = data || [];
   renderProducts();
-  setupPayments();
-  renderCart();
-  document.getElementById('year').textContent = new Date().getFullYear();
-}
-
-function initCategories() {
-  const cats = [...new Set(products.map(p => p.category).filter(Boolean))];
-  document.getElementById('catFilter').innerHTML =
-    '<option value="">كل الفئات</option>' + cats.map(c => `<option>${esc(c)}</option>`).join('');
-}
-
-// يحوّل رابط الفيديو لعرض مناسب: يوتيوب، أو ملف فيديو مباشر
-function mediaHtml(p) {
-  const url = (p.video_url || '').trim();
-  if (url) {
-    const yt = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{11})/);
-    if (yt) return `<iframe src="https://www.youtube.com/embed/${yt[1]}" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe>`;
-    if (/\.(mp4|webm|mov)(\?|$)/i.test(url)) return `<video src="${esc(url)}" controls playsinline preload="metadata"></video>`;
-    return `<a href="${esc(url)}" target="_blank" style="color:#fff">شوف الفيديو</a>`;
-  }
-  if (p.image_url) return `<img src="${esc(p.image_url)}" alt="${esc(p.name)}">`;
-  return '<div class="noimg"><img src="logo.jpg" alt="خرزه براند"></div>';
 }
 
 function renderProducts() {
-  const cat = document.getElementById('catFilter').value;
-  if (!products.length) {
-    document.getElementById('products').innerHTML = '<p class="muted">المنتجات هتظهر هنا قريب.</p>';
-    return;
+  const q = $('pSearch').value.trim().toLowerCase();
+  const list = products.filter(p => !q || (p.name + ' ' + (p.category || '')).toLowerCase().includes(q));
+  $('pCount').textContent = products.length;
+  $('pEmpty').style.display = products.length ? 'none' : 'block';
+  $('pRows').innerHTML = list.map(p => {
+    const low = (p.qty || 0) <= (p.min_qty || 0);
+    return `<tr>
+      <td>${esc(p.name)}<div class="muted">${esc(p.color || '')} ${esc(p.size || '')}</div></td>
+      <td>${esc(p.category || '')}</td>
+      <td>${fmt(p.price)}</td>
+      <td class="${low ? 'low' : ''}">${p.qty ?? 0}</td>
+      <td>${p.active ? 'ظاهر' : 'مخفي'}</td>
+      <td>
+        <button class="light" onclick="editProduct(${p.id})">تعديل</button>
+        <button class="light" onclick="toggleProduct(${p.id})">${p.active ? 'إخفاء' : 'إظهار'}</button>
+        <button class="danger" onclick="deleteProduct(${p.id})">حذف</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function readProductForm() {
+  return {
+    name: $('fName').value.trim(),
+    category: $('fCat').value.trim(),
+    color: $('fColor').value.trim(),
+    size: $('fSize').value.trim(),
+    price: parseFloat($('fPrice').value),
+    cost: parseFloat($('fCost').value) || 0,
+    qty: parseInt($('fQty').value) || 0,
+    min_qty: parseInt($('fMin').value) || 0,
+    image_url: $('fImg').value.trim(),
+    video_url: $('fVideo').value.trim(),
+    active: $('fActive').checked
+  };
+}
+
+async function saveProduct() {
+  const d = readProductForm();
+  if (!d.name) { say('pMsg', 'اكتب اسم المنتج'); return; }
+  if (!(d.price >= 0)) { say('pMsg', 'اكتب سعر صحيح'); return; }
+  if (d.qty < 0) { say('pMsg', 'الكمية مينفعش تكون سالبة'); return; }
+
+  let error;
+  if (editingProductId) {
+    ({ error } = await sb.from('products').update(d).eq('id', editingProductId));
+  } else {
+    const id = Date.now();
+    const sku = 'KH-' + id.toString(36).toUpperCase();
+    ({ error } = await sb.from('products').insert({ id, sku, barcode: sku, ...d }));
   }
-  const list = products.filter(p => !cat || p.category === cat);
-  document.getElementById('products').innerHTML = list.map(p => {
-    const inCart = cart.find(l => String(l.id) === String(p.id));
-    const out = (p.qty || 0) <= 0;
-    const maxed = inCart && inCart.qty >= p.qty;
-    return `
-      <div class="prod">
-        <div class="media">${mediaHtml(p)}</div>
-        <div class="pbody">
-          <div class="pname">${esc(p.name)}</div>
-          <div class="pmeta">${esc([p.color, p.size].filter(Boolean).join(' · '))}</div>
-          <div class="pprice">${fmt(p.price)} ${CURRENCY}</div>
-          <button class="order" ${out ? 'disabled' : ''} onclick="orderNow('${esc(p.id)}')">
-            ${out ? 'نفدت الكمية' : 'اطلب الان'}
-          </button>
-          <button class="add" ${out || maxed ? 'disabled' : ''} onclick="addToCart('${esc(p.id)}')">
-            ${maxed ? 'وصلت للحد المتاح' : 'أضف للسلة بس'}
-          </button>
-        </div>
-      </div>`;
-  }).join('') || '<p class="muted">مفيش منتجات في الفئة دي.</p>';
+  if (error) { say('pMsg', 'حصلت مشكلة: ' + error.message); return; }
+  say('pMsg', editingProductId ? 'تم تعديل المنتج' : 'تمت إضافة المنتج');
+  resetProductForm(true);
+  loadProducts();
 }
 
-function addToCart(id) {
-  const p = findP(id);
+function editProduct(id) {
+  const p = products.find(x => x.id === id);
   if (!p) return;
-  const line = cart.find(l => String(l.id) === String(id));
-  if (line) { if (line.qty < p.qty) line.qty++; }
-  else cart.push({ id: p.id, qty: 1 });
-  renderAll();
+  editingProductId = id;
+  $('fName').value = p.name || '';
+  $('fCat').value = p.category || '';
+  $('fColor').value = p.color || '';
+  $('fSize').value = p.size || '';
+  $('fPrice').value = p.price ?? '';
+  $('fCost').value = p.cost ?? '';
+  $('fQty').value = p.qty ?? 0;
+  $('fMin').value = p.min_qty ?? 0;
+  $('fImg').value = p.image_url || '';
+  $('fVideo').value = p.video_url || '';
+  $('fActive').checked = !!p.active;
+  $('pFormTitle').textContent = 'تعديل منتج';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// اطلب الان: يضيف المنتج للسلة وينقل العميل لنموذج الطلب
-function orderNow(id) {
-  const p = findP(id);
-  if (!p || (p.qty || 0) <= 0) return;
-  const line = cart.find(l => String(l.id) === String(id));
-  if (!line) cart.push({ id: p.id, qty: 1 });
-  renderAll();
-  document.getElementById('orderForm').scrollIntoView({ behavior: 'smooth' });
-  setTimeout(() => document.getElementById('cName').focus(), 500);
+function resetProductForm(keepMsg) {
+  editingProductId = null;
+  ['fName','fCat','fColor','fSize','fPrice','fCost','fImg','fVideo'].forEach(id => $(id).value = '');
+  $('fQty').value = 0;
+  $('fMin').value = 2;
+  $('fActive').checked = true;
+  $('pFormTitle').textContent = 'إضافة منتج جديد';
+  if (!keepMsg) say('pMsg', '');
 }
 
-function changeQty(id, d) {
-  const line = cart.find(l => String(l.id) === String(id));
-  const p = findP(id);
-  if (!line || !p) return;
-  const nq = line.qty + d;
-  if (nq <= 0) cart = cart.filter(l => String(l.id) !== String(id));
-  else if (nq <= p.qty) line.qty = nq;
-  renderAll();
+async function toggleProduct(id) {
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  const { error } = await sb.from('products').update({ active: !p.active }).eq('id', id);
+  if (error) { say('pListMsg', 'حصلت مشكلة: ' + error.message); return; }
+  loadProducts();
+}
+
+async function deleteProduct(id) {
+  const p = products.find(x => x.id === id);
+  if (!p || !confirm('تحذف "' + p.name + '"؟')) return;
+  const { error } = await sb.from('products').delete().eq('id', id);
+  if (error) { say('pListMsg', 'حصلت مشكلة: ' + error.message); return; }
+  loadProducts();
+}
+
+/* ---------- settings ---------- */
+async function loadSettings() {
+  const { data, error } = await sb.from('settings').select('value').eq('key', 'payments').maybeSingle();
+  if (error) { say('sMsg', 'مش قادر أحمّل الإعدادات: ' + error.message); return; }
+  const v = (data && data.value) || {};
+  $('sInsta').value = v.instapay || '';
+  $('sVoda').value = v.vodafone || '';
+  $('sVodaOn').checked = !!v.vodafone_enabled;
+  $('sCod').checked = !!v.cod_enabled;
+  $('sWa').value = v.whatsapp || '';
+}
+
+async function savePayments() {
+  const wa = $('sWa').value.trim();
+  if (wa && !/^20[0-9]{10}$/.test(wa)) { say('sMsg', 'رقم الواتساب لازم يبدأ بـ 20 وبعده 10 أرقام'); return; }
+  const value = {
+    instapay: $('sInsta').value.trim(),
+    vodafone: $('sVoda').value.trim(),
+    vodafone_enabled: $('sVodaOn').checked,
+    cod_enabled: $('sCod').checked,
+    whatsapp: wa
+  };
+  const { error } = await sb.from('settings').upsert({ key: 'payments', value });
+  say('sMsg', error ? 'حصلت مشكلة: ' + error.message : 'تم الحفظ، المتجر هيتحدّث مع أول refresh');
+}
+
+/* ---------- coupons ---------- */
+async function loadCoupons() {
+  const { data, error } = await sb.from('coupons').select('*').order('code');
+  if (error) { say('cMsg', 'مش قادر أحمّل الكوبونات: ' + error.message); return; }
+  coupons = data || [];
+  $('couponRows').innerHTML = coupons.map((c, i) => `
+    <tr>
+      <td>${esc(c.code)}</td>
+      <td>${c.type === 'percent' ? c.value + '%' : Number(c.value).toFixed(2) + ' ج.م'}</td>
+      <td>${c.active ? 'فعال' : 'متوقف'}</td>
+      <td>
+        <button class="light" onclick="toggleCoupon(${i})">${c.active ? 'إيقاف' : 'تفعيل'}</button>
+        <button class="danger" onclick="deleteCoupon(${i})">حذف</button>
+      </td>
+    </tr>`).join('');
+  $('cEmpty').style.display = coupons.length ? 'none' : 'block';
+}
+
+async function addCoupon() {
+  const code = $('cCode').value.trim().toUpperCase();
+  const value = parseFloat($('cVal').value);
+  if (!code) { say('cMsg', 'اكتب الكود'); return; }
+  if (!(value > 0)) { say('cMsg', 'القيمة لازم تكون أكبر من صفر'); return; }
+  const { error } = await sb.from('coupons').insert({ code, type: $('cType').value, value, active: true });
+  if (error) { say('cMsg', error.code === '23505' ? 'الكود ده موجود قبل كده' : 'حصلت مشكلة: ' + error.message); return; }
+  $('cCode').value = '';
+  say('cMsg', 'تمت إضافة الكوبون');
+  loadCoupons();
+}
+
+async function toggleCoupon(i) {
+  const c = coupons[i];
+  const { error } = await sb.from('coupons').update({ active: !c.active }).eq('code', c.code);
+  if (error) { say('cMsg', 'حصلت مشكلة: ' + error.message); return; }
+  loadCoupons();
+}
+
+async function deleteCoupon(i) {
+  const c = coupons[i];
+  if (!confirm('تحذف الكوبون ' + c.code + '؟')) return;
+  const { error } = await sb.from('coupons').delete().eq('code', c.code);
+  if (error) { say('cMsg', 'حصلت مشكلة: ' + error.message); return; }
+  loadCoupons();
+}
+
+/* =================== POINT OF SALE =================== */
+const STORE_NAME = 'خرزه - المحل الرئيسي';
+let posShift = null, posProducts = [], posCoupons = [], posCart = [], posCouponObj = null, posTotalsObj = { sub: 0, disc: 0, total: 0 }, posTodaySales = [];
+
+function sumBy(arr, f) { return arr.reduce((a, x) => a + f(x), 0); }
+function lineTotal(l) {
+  const base = l.price * l.qty;
+  const d = l.dType === 'percent' ? base * (l.dVal || 0) / 100 : (l.dVal || 0);
+  return Math.max(0, base - d);
+}
+
+async function initPos() {
+  await Promise.all([loadPosProducts(), loadPosCoupons(), loadShift(), loadTodaySales(), refreshPosCustomers()]);
+  renderCart();
+  posTotals();
+}
+
+async function loadPosProducts() {
+  const { data, error } = await sb.from('products').select('*').eq('active', true).gt('qty', 0).order('name');
+  if (error) { say('posMsg', 'مش قادر أحمّل المنتجات: ' + error.message); return; }
+  posProducts = data || [];
+}
+
+async function loadPosCoupons() {
+  const { data } = await sb.from('coupons').select('*').eq('active', true);
+  posCoupons = data || [];
+}
+
+async function loadShift() {
+  const { data } = await sb.from('shifts').select('*').is('closed_at', null).order('opened_at', { ascending: false }).limit(1).maybeSingle();
+  posShift = data || null;
+  renderShift();
+}
+
+function renderShift() {
+  $('shiftBar').innerHTML = posShift
+    ? `<span class="pill s-shipped">الوردية مفتوحة</span>
+       الكاشير: <b>${esc(posShift.cashier)}</b> — الكاش الافتتاحي: ${fmt(posShift.opening_cash)}
+       <button class="danger" onclick="closeShift()">قفل الوردية</button>`
+    : `<span class="pill s-cancelled">مفيش وردية مفتوحة</span>
+       اسم الكاشير <input id="posCashier" class="inline">
+       الكاش الافتتاحي <input id="posOpenCash" class="inline" type="number" min="0" step="0.01" value="0" style="width:110px">
+       <button onclick="openShift()">فتح الوردية</button>`;
+}
+
+async function openShift() {
+  const cashier = $('posCashier').value.trim();
+  if (!cashier) { say('posMsg', 'اكتب اسم الكاشير'); return; }
+  const row = {
+    id: Date.now(), cashier, store_name: STORE_NAME,
+    opened_at: new Date().toISOString(),
+    opening_cash: parseFloat($('posOpenCash').value) || 0
+  };
+  const { error } = await sb.from('shifts').insert(row);
+  if (error) { say('posMsg', 'حصلت مشكلة: ' + error.message); return; }
+  say('posMsg', 'اتفتحت الوردية');
+  loadShift();
+}
+
+async function closeShift() {
+  if (!posShift) return;
+  const { data: sales } = await sb.from('sales').select('cash_net').eq('shift_id', posShift.id);
+  const cashNet = sumBy(sales || [], s => Number(s.cash_net) || 0);
+  const expected = Number(posShift.opening_cash) + cashNet;
+  const input = prompt('الكاش الفعلي في الدرج:', fmt(expected));
+  if (input === null) return;
+  const counted = parseFloat(input);
+  if (isNaN(counted)) { say('posMsg', 'ادخل رقم صحيح'); return; }
+  const diff = counted - expected;
+  const { error } = await sb.from('shifts').update({
+    closed_at: new Date().toISOString(), counted_cash: counted, expected_cash: expected, diff
+  }).eq('id', posShift.id);
+  if (error) { say('posMsg', 'حصلت مشكلة: ' + error.message); return; }
+  alert(`تم قفل الوردية.\nالمتوقع في الدرج: ${fmt(expected)}\nالفعلي: ${fmt(counted)}\nالفرق: ${fmt(diff)}`);
+  loadShift();
+}
+
+/* ----- search & scan ----- */
+function posMatches(q) {
+  return posProducts.filter(p =>
+    [p.name, p.category, p.barcode, p.sku, p.color, p.size].join(' ').toLowerCase().includes(q)
+  ).slice(0, 12);
+}
+
+function posSearch() {
+  const q = $('posScan').value.trim().toLowerCase();
+  if (!q) { $('posResults').innerHTML = ''; return; }
+  const list = posMatches(q);
+  $('posResults').innerHTML = list.length
+    ? list.map(p => `<button class="light" style="display:block;width:100%;text-align:right;margin:3px 0" onclick="posAdd(${p.id})">
+        ${esc(p.name)} ${esc(p.color || '')} ${esc(p.size || '')} — ${fmt(p.price)} (متاح ${p.qty})</button>`).join('')
+    : '<span class="muted">مفيش نتائج</span>';
+}
+
+function posScanKey(e) {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const q = e.target.value.trim().toLowerCase();
+  if (!q) return;
+  const exact = posProducts.find(p => (p.barcode || '').toLowerCase() === q || (p.sku || '').toLowerCase() === q);
+  if (exact) posAdd(exact.id);
+  else {
+    const m = posMatches(q);
+    if (m.length === 1) posAdd(m[0].id);
+    else { say('posMsg', m.length ? 'في أكتر من نتيجة، اختار من القائمة' : 'المنتج مش موجود'); return; }
+  }
+  e.target.value = '';
+  $('posResults').innerHTML = '';
+}
+
+/* ----- cart ----- */
+function posAdd(id) {
+  if (!posShift) { say('posMsg', 'افتح الوردية الأول'); return; }
+  const p = posProducts.find(x => x.id === Number(id));
+  if (!p) return;
+  const line = posCart.find(l => l.id === p.id);
+  const current = line ? line.qty : 0;
+  if (current + 1 > p.qty) { say('posMsg', `المتاح من ${p.name} هو ${p.qty} بس`); return; }
+  if (line) line.qty++;
+  else posCart.push({ id: p.id, sku: p.barcode || p.sku, name: p.name, color: p.color || '', price: p.price, qty: 1, dType: 'percent', dVal: 0 });
+  say('posMsg', '');
+  renderCart();
+  posTotals();
+}
+
+function posChgQty(i, d) {
+  const l = posCart[i];
+  const p = posProducts.find(x => x.id === l.id);
+  const nq = l.qty + d;
+  if (nq <= 0) { posCart.splice(i, 1); }
+  else if (p && nq > p.qty) { say('posMsg', `المتاح ${p.qty} بس`); return; }
+  else l.qty = nq;
+  renderCart();
+  posTotals();
+}
+
+function posSetLine(i, key, val) {
+  posCart[i][key] = key === 'dVal' ? (parseFloat(val) || 0) : val;
+  renderCart();
+  posTotals();
+}
+
+function posRemoveLine(i) {
+  posCart.splice(i, 1);
+  renderCart();
+  posTotals();
 }
 
 function renderCart() {
-  document.getElementById('cartLines').innerHTML = cart.map(l => {
-    const p = findP(l.id);
-    if (!p) return '';
-    return `
-      <div class="line">
-        <div>
-          <div>${esc(p.name)}</div>
-          <div class="muted">${fmt(p.price)} ${CURRENCY}</div>
-        </div>
-        <div class="qty">
-          <button onclick="changeQty('${esc(l.id)}',-1)">−</button>
-          <span style="margin:0 8px">${l.qty}</span>
-          <button onclick="changeQty('${esc(l.id)}',1)">+</button>
-        </div>
-        <div>${fmt(p.price * l.qty)}</div>
-      </div>`;
-  }).join('');
-  document.getElementById('cartEmpty').style.display = cart.length ? 'none' : 'block';
-  document.getElementById('cartTotal').textContent = fmt(cartTotal());
-  document.getElementById('cartCount').textContent = cart.reduce((s, l) => s + l.qty, 0);
-  document.getElementById('sendBtn').disabled = !cart.length;
+  $('posCart').innerHTML = posCart.map((l, i) => `
+    <tr>
+      <td>${esc(l.name)} ${esc(l.color)}<div class="muted">${esc(l.sku)}</div></td>
+      <td>
+        <button class="light" onclick="posChgQty(${i},-1)">-</button>
+        ${l.qty}
+        <button class="light" onclick="posChgQty(${i},1)">+</button>
+      </td>
+      <td>${fmt(l.price)}</td>
+      <td>
+        <select class="inline" onchange="posSetLine(${i},'dType',this.value)">
+          <option value="percent" ${l.dType === 'percent' ? 'selected' : ''}>%</option>
+          <option value="fixed" ${l.dType === 'fixed' ? 'selected' : ''}>ج.م</option>
+        </select>
+        <input class="inline" type="number" min="0" step="0.01" value="${l.dVal}" style="width:70px" onchange="posSetLine(${i},'dVal',this.value)">
+      </td>
+      <td>${fmt(lineTotal(l))}</td>
+      <td><button class="danger" onclick="posRemoveLine(${i})">×</button></td>
+    </tr>`).join('');
+  $('posCartEmpty').style.display = posCart.length ? 'none' : 'block';
 }
 
-function setupPayments() {
-  const opts = [];
-  if (payments.instapay) opts.push(['instapay', 'انستاباي']);
-  if (payments.vodafone_enabled && payments.vodafone) opts.push(['vodafone', 'فودافون كاش']);
-  if (payments.cod_enabled) opts.push(['cod', 'الدفع عند الاستلام']);
-  document.getElementById('payOpts').innerHTML = opts.length
-    ? opts.map((o, i) => `<label><input type="radio" name="pm" value="${o[0]}" ${i === 0 ? 'checked' : ''} onchange="showPayInfo()"> ${o[1]}</label>`).join('')
-    : '<span class="muted">طرق الدفع مش متاحة دلوقتي</span>';
-  showPayInfo();
+/* ----- totals & coupons ----- */
+function posTotals() {
+  const sub = sumBy(posCart, lineTotal);
+  const type = $('posInvType').value;
+  const v = parseFloat($('posInvVal').value) || 0;
+  let d = type === 'percent' ? sub * v / 100 : v;
+  if (posCouponObj) d += posCouponObj.type === 'percent' ? sub * posCouponObj.value / 100 : posCouponObj.value;
+  d = Math.min(sub, Math.max(0, d));
+  const total = sub - d;
+  posTotalsObj = { sub, disc: d, total };
+  $('posSub').textContent = fmt(sub);
+  $('posDisc').textContent = fmt(d);
+  $('posTotal').textContent = fmt(total);
+
+  const paid = (parseFloat($('posCash').value) || 0) + (parseFloat($('posInsta').value) || 0) + (parseFloat($('posVoda').value) || 0);
+  $('posPayInfo').textContent = paid + 0.001 >= total
+    ? `المدفوع: ${fmt(paid)} — الباقي للعميل: ${fmt(paid - total)}`
+    : `المدفوع: ${fmt(paid)} — ناقص: ${fmt(total - paid)}`;
 }
 
-function selectedPay() {
-  const el = document.querySelector('input[name="pm"]:checked');
-  return el ? el.value : null;
+function posApplyCoupon() {
+  const code = $('posCoupon').value.trim().toUpperCase();
+  const c = posCoupons.find(x => (x.code || '').toUpperCase() === code);
+  if (!c) { say('posMsg', 'الكود غير صالح أو متوقف'); return; }
+  posCouponObj = c;
+  $('posCouponInfo').textContent = `الكوبون ${c.code}: خصم ${c.type === 'percent' ? c.value + '%' : fmt(c.value) + ' ج.م'}`;
+  posTotals();
 }
 
-function showPayInfo() {
-  const m = selectedPay();
-  const box = document.getElementById('payInfo');
-  if (!m) { box.classList.add('hidden'); return; }
-  box.classList.remove('hidden');
-  if (m === 'instapay') box.innerHTML = `حوّل المبلغ على انستاباي: <b>${esc(payments.instapay)}</b>`;
-  else if (m === 'vodafone') box.innerHTML = `حوّل المبلغ على فودافون كاش: <b>${esc(payments.vodafone)}</b>`;
-  else box.innerHTML = 'هتدفع كاش لما الطلب يوصلك.';
+function posClearCoupon() {
+  posCouponObj = null;
+  $('posCoupon').value = '';
+  $('posCouponInfo').textContent = '';
+  posTotals();
 }
 
-function renderAll() {
-  renderProducts();
-  renderCart();
+function posPayAll(m) {
+  const t = posTotalsObj.total;
+  $('posCash').value = m === 'cash' ? fmt(t) : 0;
+  $('posInsta').value = m === 'insta' ? fmt(t) : 0;
+  $('posVoda').value = m === 'voda' ? fmt(t) : 0;
+  posTotals();
 }
 
-async function sendOrder() {
-  if (!cart.length) { alert('السلة فاضية'); return; }
-  const name = document.getElementById('cName').value.trim();
-  const phone = document.getElementById('cPhone').value.trim();
-  const addr = document.getElementById('cAddr').value.trim();
-  const note = document.getElementById('cNote').value.trim();
-  if (!name || !phone || !addr) { alert('اكتب الاسم والتليفون والعنوان'); return; }
-  if (!/^01[0-9]{9}$/.test(phone)) { alert('رقم التليفون لازم يكون 11 رقم ويبدأ بـ 01'); return; }
-  const m = selectedPay();
-  if (!m) { alert('اختار طريقة الدفع'); return; }
-  if (!payments.whatsapp) { alert('الطلبات مش متاحة دلوقتي، جرّب بعد شوية'); return; }
+/* ----- checkout ----- */
+async function posCheckout() {
+  if (!posShift) { say('posMsg', 'افتح الوردية الأول'); return; }
+  if (!posCart.length) { say('posMsg', 'السلة فاضية'); return; }
+  posTotals();
+  const total = posTotalsObj.total;
 
-  for (const l of cart) {
-    const p = findP(l.id);
-    if (!p || l.qty > p.qty) { alert(`الكمية المتاحة من ${p ? p.name : 'المنتج'} هي ${p ? p.qty : 0} بس`); return; }
+  // تأكيد الكميات من قاعدة البيانات قبل البيع
+  const ids = posCart.map(l => l.id);
+  const { data: fresh, error: fe } = await sb.from('products').select('id, qty').in('id', ids);
+  if (fe) { say('posMsg', 'حصلت مشكلة: ' + fe.message); return; }
+  const freshQty = Object.fromEntries((fresh || []).map(p => [p.id, p.qty]));
+  for (const l of posCart) {
+    if ((freshQty[l.id] ?? 0) < l.qty) { say('posMsg', `الكمية المتاحة من ${l.name} دلوقتي ${freshQty[l.id] ?? 0}`); await loadPosProducts(); renderCart(); return; }
   }
 
-  const btn = document.getElementById('sendBtn');
+  const cash = parseFloat($('posCash').value) || 0;
+  const insta = parseFloat($('posInsta').value) || 0;
+  const voda = parseFloat($('posVoda').value) || 0;
+  const rInsta = $('posRInsta').value.trim();
+  const rVoda = $('posRVoda').value.trim();
+  const paid = cash + insta + voda;
+  if (paid + 0.001 < total) { say('posMsg', 'المدفوع أقل من الإجمالي'); return; }
+  if (insta > 0 && !rInsta) { say('posMsg', 'اكتب رقم عملية انستاباي'); return; }
+  if (voda > 0 && !rVoda) { say('posMsg', 'اكتب رقم عملية فودافون كاش'); return; }
+  const change = Math.round((paid - total) * 100) / 100;
+  if (change > cash + 0.001) { say('posMsg', 'الباقي بيتدفع كاش بس، زوّد الكاش أو قلل الإلكتروني'); return; }
+
+  const btn = $('posSellBtn');
   btn.disabled = true;
-  btn.textContent = 'جاري تسجيل الطلب...';
+  const sale = {
+    id: Date.now(),
+    shift_id: posShift.id,
+    date: new Date().toISOString(),
+    items: posCart.map(l => ({ id: l.id, sku: l.sku, name: l.name, color: l.color, qty: l.qty, price: l.price, discount: l.dType + ':' + l.dVal, lineTotal: lineTotal(l) })),
+    subtotal: posTotalsObj.sub,
+    invoice_discount: posTotalsObj.disc,
+    coupon: posCouponObj ? posCouponObj.code : null,
+    total,
+    payments: { cash, instapay: insta, vodafone: voda },
+    refs: { instapay: rInsta, vodafone: rVoda },
+    change,
+    cash_net: cash - change,
+    source: 'pos',
+    customer_id: Number($('posCustomer').value) || null
+  };
 
-  const code = 'KH' + Date.now().toString(36).toUpperCase().slice(-5);
-  const payLabel = m === 'instapay' ? 'انستاباي' : m === 'vodafone' ? 'فودافون كاش' : 'الدفع عند الاستلام';
-  const total = cartTotal();
-  const items = cart.map(l => {
-    const p = findP(l.id);
-    return { id: p.id, name: p.name, color: p.color || '', qty: l.qty, price: p.price, lineTotal: p.price * l.qty };
+  const { error } = await sb.from('sales').insert(sale);
+  if (error) { say('posMsg', 'حصلت مشكلة وماتسجلش البيع: ' + error.message); btn.disabled = false; return; }
+
+  // خصم المخزون
+  for (const l of posCart) {
+    await sb.from('products').update({ qty: Math.max(0, freshQty[l.id] - l.qty) }).eq('id', l.id);
+  }
+
+  printReceipt(sale);
+
+  posCart = [];
+  $('posCustomer').value = '';
+  posClearCoupon();
+  ['posCash', 'posInsta', 'posVoda'].forEach(id => $(id).value = 0);
+  $('posRInsta').value = '';
+  $('posRVoda').value = '';
+  $('posInvVal').value = 0;
+  say('posMsg', 'تم البيع ✔');
+  btn.disabled = false;
+  await loadPosProducts();
+  await loadTodaySales();
+  renderCart();
+  posTotals();
+  $('posScan').focus();
+}
+
+/* ----- receipt ----- */
+function printReceipt(s) {
+  const pays = [];
+  if (s.payments.cash) pays.push(`<div class="rc-line"><span>كاش</span><span>${fmt(s.payments.cash)}</span></div>`);
+  if (s.payments.instapay) pays.push(`<div class="rc-line"><span>انستاباي (${esc(s.refs.instapay)})</span><span>${fmt(s.payments.instapay)}</span></div>`);
+  if (s.payments.vodafone) pays.push(`<div class="rc-line"><span>فودافون (${esc(s.refs.vodafone)})</span><span>${fmt(s.payments.vodafone)}</span></div>`);
+  $('printArea').innerHTML = `
+    <div style="text-align:center"><b>${esc(STORE_NAME)}</b><br>${new Date(s.date).toLocaleString('ar-EG')}<br>فاتورة #${String(s.id).slice(-6)}</div>
+    <div class="rc-hr"></div>
+    ${s.items.map(i => `<div>${esc(i.name)} ${esc(i.color)}</div><div class="rc-line"><span>${i.qty} × ${fmt(i.price)}</span><span>${fmt(i.lineTotal)}</span></div>`).join('')}
+    <div class="rc-hr"></div>
+    <div class="rc-line"><span>قبل الخصم</span><span>${fmt(s.subtotal)}</span></div>
+    <div class="rc-line"><span>الخصم${s.coupon ? ' (' + esc(s.coupon) + ')' : ''}</span><span>${fmt(s.invoice_discount)}</span></div>
+    <div class="rc-line"><b>المطلوب</b><b>${fmt(s.total)}</b></div>
+    <div class="rc-hr"></div>
+    ${pays.join('')}
+    <div class="rc-line"><span>الباقي</span><span>${fmt(s.change)}</span></div>
+    <div class="rc-hr"></div>
+    <div style="text-align:center">شكراً لزيارتكم - خرزه</div>`;
+  window.print();
+}
+
+/* ----- today's sales ----- */
+async function loadTodaySales() {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const { data, error } = await sb.from('sales').select('*').gte('date', start.toISOString()).order('date', { ascending: false }).limit(200);
+  if (error) { say('posMsg', 'مش قادر أحمّل مبيعات اليوم: ' + error.message); return; }
+  posTodaySales = data || [];
+  $('posTodayCount').textContent = posTodaySales.length;
+  $('posTodayTotal').textContent = 'الإجمالي: ' + fmt(sumBy(posTodaySales, s => Number(s.total) || 0)) + ' ج.م';
+  $('posToday').innerHTML = posTodaySales.map(s => {
+    const m = [];
+    if (s.payments && s.payments.cash) m.push('كاش');
+    if (s.payments && s.payments.instapay) m.push('انستاباي');
+    if (s.payments && s.payments.vodafone) m.push('فودافون');
+    return `<tr>
+      <td>${new Date(s.date).toLocaleTimeString('ar-EG')}</td>
+      <td>${fmt(s.total)}</td>
+      <td>${m.join(' + ')}</td>
+      <td><button class="light" onclick="posReprint(${s.id})">طباعة</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function posReprint(id) {
+  const s = posTodaySales.find(x => Number(x.id) === Number(id));
+  if (s) printReceipt(s);
+}
+
+/* =================== CUSTOMERS =================== */
+let customers = [], custStats = {}, editingCustomerId = null;
+
+async function loadCustomers() {
+  const { data, error } = await sb.from('customers').select('*').order('name');
+  if (error) { say('cuListMsg', 'مش قادر أحمّل العملاء: ' + error.message); return; }
+  customers = data || [];
+  const { data: sales } = await sb.from('sales').select('customer_id,total').not('customer_id', 'is', null);
+  custStats = {};
+  (sales || []).forEach(x => {
+    const k = String(x.customer_id);
+    if (!custStats[k]) custStats[k] = { count: 0, total: 0 };
+    custStats[k].count++;
+    custStats[k].total += Number(x.total) || 0;
   });
+  renderCustomers();
+}
 
-  const { error } = await sb.from('web_orders').insert({
-    id: code, status: 'pending', name, phone, address: addr, note,
-    payment_method: m, items, total
+function renderCustomers() {
+  const q = $('cuSearch').value.trim().toLowerCase();
+  const list = customers.filter(c => !q || (c.name + ' ' + c.phone).toLowerCase().includes(q));
+  $('cuCount').textContent = customers.length;
+  $('cuRows').innerHTML = list.map(c => {
+    const st = custStats[String(c.id)] || { count: 0, total: 0 };
+    return `<tr>
+      <td>${esc(c.name)}</td>
+      <td>${esc(c.phone)}</td>
+      <td>${esc(c.address || '')}</td>
+      <td>${st.count}</td>
+      <td>${fmt(st.total)}</td>
+      <td>
+        <button class="light" onclick="editCustomer(${c.id})">تعديل</button>
+        <button class="danger" onclick="deleteCustomer(${c.id})">حذف</button>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="6" class="muted">مفيش عملاء</td></tr>';
+}
+
+async function saveCustomer() {
+  const name = $('cuName').value.trim();
+  const phone = $('cuPhone').value.trim();
+  if (!name || !phone) { say('cuMsg', 'الاسم والتليفون مطلوبين'); return; }
+  const data = { name, phone, address: $('cuAddr').value.trim(), note: $('cuNote').value.trim() };
+  let error;
+  if (editingCustomerId) {
+    ({ error } = await sb.from('customers').update(data).eq('id', editingCustomerId));
+  } else {
+    ({ error } = await sb.from('customers').insert({ id: Date.now(), ...data }));
+  }
+  if (error) { say('cuMsg', error.code === '23505' ? 'التليفون ده موجود لعميل تاني' : 'حصلت مشكلة: ' + error.message); return; }
+  say('cuMsg', editingCustomerId ? 'تم تعديل العميل' : 'تمت إضافة العميل');
+  resetCustomerForm(true);
+  loadCustomers();
+  refreshPosCustomers();
+}
+
+function editCustomer(id) {
+  const c = customers.find(x => x.id === id);
+  if (!c) return;
+  editingCustomerId = id;
+  $('cuName').value = c.name || '';
+  $('cuPhone').value = c.phone || '';
+  $('cuAddr').value = c.address || '';
+  $('cuNote').value = c.note || '';
+  $('cuTitle').textContent = 'تعديل عميل';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function resetCustomerForm(keepMsg) {
+  editingCustomerId = null;
+  ['cuName', 'cuPhone', 'cuAddr', 'cuNote'].forEach(id => $(id).value = '');
+  $('cuTitle').textContent = 'إضافة عميل';
+  if (!keepMsg) say('cuMsg', '');
+}
+
+async function deleteCustomer(id) {
+  const st = custStats[String(id)];
+  if (st && st.count > 0) { say('cuListMsg', 'العميل ليه فواتير مسجلة، مينفعش يتحذف'); return; }
+  const c = customers.find(x => x.id === id);
+  if (!c || !confirm('تحذف "' + c.name + '"؟')) return;
+  const { error } = await sb.from('customers').delete().eq('id', id);
+  if (error) { say('cuListMsg', 'حصلت مشكلة: ' + error.message); return; }
+  loadCustomers();
+  refreshPosCustomers();
+}
+
+async function refreshPosCustomers() {
+  const { data } = await sb.from('customers').select('id,name,phone').order('name');
+  const cur = $('posCustomer').value;
+  $('posCustomer').innerHTML = '<option value="">بدون عميل</option>' +
+    (data || []).map(c => `<option value="${c.id}">${esc(c.name)} - ${esc(c.phone)}</option>`).join('');
+  $('posCustomer').value = cur;
+}
+
+/* =================== SUPPLIERS & PURCHASES =================== */
+let suppliers = [], purchaseOrders = [], supplierPayments = [], allProducts = [], poDraftLines = [];
+
+async function loadSuppliersAll() {
+  await Promise.all([loadSuppliers(), loadAllProducts(), loadPurchases(), loadSupplierPayments()]);
+  renderBalances();
+}
+
+async function loadSuppliers() {
+  const { data, error } = await sb.from('suppliers').select('*').order('name');
+  if (error) { say('suMsg', 'مش قادر أحمّل الموردين: ' + error.message); return; }
+  suppliers = data || [];
+  $('suRows').innerHTML = suppliers.map(x => `
+    <tr>
+      <td>${esc(x.name)}</td><td>${esc(x.phone || '')}</td><td>${esc(x.address || '')}</td><td>${esc(x.terms || '')}</td>
+      <td><button class="danger" onclick="deleteSupplier(${x.id})">حذف</button></td>
+    </tr>`).join('') || '<tr><td colspan="5" class="muted">مفيش موردين</td></tr>';
+  const opts = suppliers.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('') || '<option value="">ضيف مورد الأول</option>';
+  $('poSup').innerHTML = opts;
+  $('spSup').innerHTML = opts;
+}
+
+function supName(id) {
+  const s = suppliers.find(x => String(x.id) === String(id));
+  return s ? s.name : '—';
+}
+
+async function saveSupplier() {
+  const name = $('suName').value.trim();
+  if (!name) { say('suMsg', 'اكتب اسم المورد'); return; }
+  const { error } = await sb.from('suppliers').insert({
+    id: Date.now(), name,
+    phone: $('suPhone').value.trim(),
+    address: $('suAddr').value.trim(),
+    terms: $('suTerms').value
   });
+  if (error) { say('suMsg', 'حصلت مشكلة: ' + error.message); return; }
+  ['suName', 'suPhone', 'suAddr'].forEach(id => $(id).value = '');
+  say('suMsg', 'تمت إضافة المورد');
+  loadSuppliersAll();
+}
 
-  if (error) {
-    console.error(error);
-    alert('حصلت مشكلة وماتسجلش الطلب، جرّب تاني بعد شوية');
-    btn.disabled = false;
-    btn.textContent = 'ابعت الطلب';
+async function deleteSupplier(id) {
+  if (purchaseOrders.some(o => o.supplier_id === id) || supplierPayments.some(p => p.supplier_id === id)) {
+    say('suMsg', 'المورد ده ليه أوامر شراء أو دفعات، مينفعش يتحذف');
     return;
   }
+  if (!confirm('تحذف المورد؟')) return;
+  const { error } = await sb.from('suppliers').delete().eq('id', id);
+  if (error) { say('suMsg', 'حصلت مشكلة: ' + error.message); return; }
+  loadSuppliersAll();
+}
 
-  const lines = items.map(i => `• ${i.name}${i.color ? ' - ' + i.color : ''} × ${i.qty} = ${fmt(i.lineTotal)} ${CURRENCY}`).join('\n');
-  const text =
-`طلب جديد من ${BRAND}
-رقم الطلب: ${code}
+async function loadAllProducts() {
+  const { data } = await sb.from('products').select('id,name,color,size,cost,qty').order('name');
+  allProducts = data || [];
+  $('poProd').innerHTML = allProducts.map(p =>
+    `<option value="${p.id}">${esc(p.name)} ${esc(p.color || '')} ${esc(p.size || '')}</option>`).join('')
+    || '<option value="">مفيش منتجات</option>';
+}
 
-${lines}
+function addPurchaseLine() {
+  const pid = Number($('poProd').value);
+  const p = allProducts.find(x => x.id === pid);
+  const qty = parseInt($('poQty').value) || 0;
+  const cost = parseFloat($('poCost').value) || 0;
+  if (!p) { say('poMsg', 'اختار منتج'); return; }
+  if (qty <= 0) { say('poMsg', 'الكمية لازم تكون أكبر من صفر'); return; }
+  poDraftLines.push({ productId: p.id, name: [p.name, p.color, p.size].filter(Boolean).join(' / '), qty, unitCost: cost });
+  $('poQty').value = 1;
+  $('poCost').value = 0;
+  say('poMsg', '');
+  renderPurchaseDraft();
+}
 
-الإجمالي: ${fmt(total)} ${CURRENCY}
-طريقة الدفع: ${payLabel}
+function delPurchaseLine(i) {
+  poDraftLines.splice(i, 1);
+  renderPurchaseDraft();
+}
 
-الاسم: ${name}
-التليفون: ${phone}
-العنوان: ${addr}${note ? '\nملاحظات: ' + note : ''}`;
+function renderPurchaseDraft() {
+  $('poDraft').innerHTML = poDraftLines.map((l, i) => `
+    <tr><td>${esc(l.name)}</td><td>${l.qty}</td><td>${fmt(l.unitCost)}</td><td>${fmt(l.qty * l.unitCost)}</td>
+    <td><button class="danger" onclick="delPurchaseLine(${i})">×</button></td></tr>`).join('');
+  $('poDraftTotal').textContent = 'الإجمالي: ' + fmt(sumBy(poDraftLines, l => l.qty * l.unitCost)) + ' ج.م';
+}
 
-  window.open(`https://wa.me/${payments.whatsapp}?text=${encodeURIComponent(text)}`, '_blank');
+async function savePurchase() {
+  const sid = Number($('poSup').value);
+  if (!sid) { say('poMsg', 'اختار المورد'); return; }
+  if (!poDraftLines.length) { say('poMsg', 'ضيف منتجات للأمر'); return; }
+  const { error } = await sb.from('purchase_orders').insert({
+    id: Date.now(), supplier_id: sid, date: new Date().toISOString(),
+    lines: poDraftLines, total: sumBy(poDraftLines, l => l.qty * l.unitCost), status: 'ordered'
+  });
+  if (error) { say('poMsg', 'حصلت مشكلة: ' + error.message); return; }
+  poDraftLines = [];
+  renderPurchaseDraft();
+  say('poMsg', 'تم حفظ أمر الشراء');
+  loadPurchases();
+}
 
-  const done = document.getElementById('done');
-  done.classList.remove('hidden');
-  done.innerHTML = `تم تسجيل طلبك برقم <b>${code}</b>. ابعت الرسالة في الواتساب` +
-    (m !== 'cod' ? '، وبعدها ابعت صورة إيصال التحويل في نفس المحادثة.' : '.');
+async function loadPurchases() {
+  const { data, error } = await sb.from('purchase_orders').select('*').order('date', { ascending: false });
+  if (error) { say('poMsg', 'مش قادر أحمّل الأوامر: ' + error.message); return; }
+  purchaseOrders = data || [];
+  renderPurchases();
+  renderBalances();
+}
 
-  cart = [];
-  renderAll();
-  btn.textContent = 'ابعت الطلب';
+function renderPurchases() {
+  $('poEmpty').style.display = purchaseOrders.length ? 'none' : 'block';
+  $('poRows').innerHTML = purchaseOrders.map(o => `
+    <tr>
+      <td>${new Date(o.date).toLocaleDateString('ar-EG')}</td>
+      <td>${esc(supName(o.supplier_id))}</td>
+      <td>${fmt(o.total)}</td>
+      <td><span class="pill ${o.status === 'received' ? 's-shipped' : 's-pending'}">${o.status === 'received' ? 'مستلم' : 'مطلوب'}</span></td>
+      <td>
+        ${o.status === 'ordered' ? `<button class="ok" onclick="receivePurchase(${o.id})">استلام البضاعة</button>
+        <button class="danger" onclick="deletePurchase(${o.id})">حذف</button>` : ''}
+      </td>
+    </tr>`).join('');
+}
+
+async function receivePurchase(id) {
+  const o = purchaseOrders.find(x => x.id === id);
+  if (!o || o.status !== 'ordered') return;
+  if (!confirm('تأكيد استلام البضاعة؟ الكميات هتزيد في المخزون.')) return;
+  const now = new Date().toISOString();
+  for (const l of (o.lines || [])) {
+    const { data: p } = await sb.from('products').select('qty').eq('id', l.productId).maybeSingle();
+    if (p) await sb.from('products').update({ qty: (p.qty || 0) + l.qty, cost: l.unitCost }).eq('id', l.productId);
+    await sb.from('cost_history').insert({ date: now, supplier_id: o.supplier_id, product_id: l.productId, cost: l.unitCost, order_id: o.id });
+  }
+  const { error } = await sb.from('purchase_orders').update({ status: 'received', received_at: now }).eq('id', id);
+  if (error) { say('poMsg', 'حصلت مشكلة: ' + error.message); return; }
+  say('poMsg', 'تم الاستلام وتحديث المخزون');
+  loadPurchases();
+  loadAllProducts();
+}
+
+async function deletePurchase(id) {
+  const o = purchaseOrders.find(x => x.id === id);
+  if (!o || o.status !== 'ordered' || !confirm('تحذف أمر الشراء؟')) return;
+  const { error } = await sb.from('purchase_orders').delete().eq('id', id);
+  if (error) { say('poMsg', 'حصلت مشكلة: ' + error.message); return; }
+  loadPurchases();
+}
+
+async function loadSupplierPayments() {
+  const { data } = await sb.from('supplier_payments').select('*');
+  supplierPayments = data || [];
+  renderBalances();
+}
+
+function renderBalances() {
+  $('spRows').innerHTML = suppliers.map(s => {
+    const received = sumBy(purchaseOrders.filter(o => o.supplier_id === s.id && o.status === 'received'), o => Number(o.total) || 0);
+    const paid = sumBy(supplierPayments.filter(p => p.supplier_id === s.id), p => Number(p.amount) || 0);
+    const bal = received - paid;
+    return `<tr><td>${esc(s.name)}</td><td>${fmt(received)}</td><td>${fmt(paid)}</td><td class="${bal > 0 ? 'low' : ''}">${fmt(bal)}</td></tr>`;
+  }).join('') || '<tr><td colspan="4" class="muted">مفيش موردين</td></tr>';
+}
+
+async function recordSupplierPayment() {
+  const sid = Number($('spSup').value);
+  const amt = parseFloat($('spAmt').value) || 0;
+  if (!sid) { say('spMsg', 'اختار المورد'); return; }
+  if (amt <= 0) { say('spMsg', 'اكتب مبلغ صحيح'); return; }
+  const { error } = await sb.from('supplier_payments').insert({
+    id: Date.now(), date: new Date().toISOString(), supplier_id: sid, amount: amt, note: $('spNote').value.trim()
+  });
+  if (error) { say('spMsg', 'حصلت مشكلة: ' + error.message); return; }
+  $('spAmt').value = 0;
+  $('spNote').value = '';
+  say('spMsg', 'تم تسجيل الدفعة');
+  loadSupplierPayments();
 }
 
 init();
