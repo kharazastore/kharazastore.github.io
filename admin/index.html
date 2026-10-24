@@ -33,6 +33,16 @@
   .s-shipped { background: #d5f5e3; }
   .s-cancelled { background: #fadbd8; }
   .hidden { display: none; }
+  #printArea { display: none; }
+  @page { size: 80mm auto; margin: 2mm; }
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { display: block; position: absolute; left: 0; top: 0; width: 72mm; font-family: Arial, sans-serif; font-size: 12px; }
+  }
+  .rc-line { display: flex; justify-content: space-between; }
+  .rc-hr { border-top: 1px dashed #000; margin: 4px 0; }
+  .tot { font-size: 20px; font-weight: bold; color: #8b2252; margin-top: 8px; }
 </style>
 </head>
 <body>
@@ -50,12 +60,178 @@
 <div id="admin" class="hidden">
   <div class="row" style="margin-bottom:12px">
     <div class="tabs">
-      <button id="tabOrders" class="on" onclick="showTab('orders')">طلبات المتجر</button>
+      <button id="tabPos" class="on" onclick="showTab('pos')">نقطة البيع</button>
+      <button id="tabOrders" class="light" onclick="showTab('orders')">طلبات المتجر</button>
       <button id="tabProducts" class="light" onclick="showTab('products')">المنتجات</button>
       <button id="tabSettings" class="light" onclick="showTab('settings')">أرقام الدفع</button>
       <button id="tabCoupons" class="light" onclick="showTab('coupons')">الكوبونات</button>
+      <button id="tabCustomers" class="light" onclick="showTab('customers')">العملاء</button>
+      <button id="tabSuppliers" class="light" onclick="showTab('suppliers')">الموردين والمشتريات</button>
     </div>
     <button class="light" onclick="logout()">تسجيل خروج</button>
+  </div>
+
+  <!-- ===== CUSTOMERS ===== -->
+  <div id="customersTab" class="hidden">
+    <div class="card">
+      <h2 id="cuTitle">إضافة عميل</h2>
+      <div class="grid">
+        <div class="field">الاسم *<input id="cuName"></div>
+        <div class="field">التليفون *<input id="cuPhone" inputmode="tel"></div>
+        <div class="field">العنوان<input id="cuAddr"></div>
+        <div class="field">ملاحظات<input id="cuNote"></div>
+      </div>
+      <button class="ok" onclick="saveCustomer()">حفظ العميل</button>
+      <button class="light" onclick="resetCustomerForm()">مسح</button>
+      <div class="msg" id="cuMsg"></div>
+    </div>
+    <div class="card">
+      <div class="row" style="margin-bottom:10px">
+        <h2 style="margin:0">العملاء (<span id="cuCount">0</span>)</h2>
+        <input id="cuSearch" class="inline" placeholder="ابحث بالاسم أو التليفون" style="width:260px" oninput="renderCustomers()">
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>الاسم</th><th>التليفون</th><th>العنوان</th><th>عدد الطلبات</th><th>إجمالي الشراء</th><th></th></tr></thead>
+          <tbody id="cuRows"></tbody>
+        </table>
+      </div>
+      <div class="msg" id="cuListMsg"></div>
+    </div>
+  </div>
+
+  <!-- ===== SUPPLIERS ===== -->
+  <div id="suppliersTab" class="hidden">
+    <div class="card">
+      <h2>إضافة مورد</h2>
+      <div class="grid">
+        <div class="field">الاسم *<input id="suName"></div>
+        <div class="field">التليفون<input id="suPhone"></div>
+        <div class="field">العنوان<input id="suAddr"></div>
+        <div class="field">شروط الدفع<select id="suTerms"><option>نقدي عند الاستلام</option><option>15 يوم</option><option>30 يوم</option><option>60 يوم</option><option>أخرى</option></select></div>
+      </div>
+      <button class="ok" onclick="saveSupplier()">حفظ المورد</button>
+      <div class="msg" id="suMsg"></div>
+      <div style="overflow-x:auto;margin-top:10px">
+        <table>
+          <thead><tr><th>الاسم</th><th>التليفون</th><th>العنوان</th><th>الشروط</th><th></th></tr></thead>
+          <tbody id="suRows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>أمر شراء جديد</h2>
+      <div class="row" style="justify-content:flex-start;gap:8px">
+        <select id="poSup" class="inline"></select>
+        <select id="poProd" class="inline" style="min-width:240px"></select>
+        <input id="poQty" class="inline" type="number" min="1" step="1" value="1" style="width:90px" placeholder="الكمية">
+        <input id="poCost" class="inline" type="number" min="0" step="0.01" value="0" style="width:120px" placeholder="سعر التكلفة">
+        <button onclick="addPurchaseLine()">إضافة للأمر</button>
+      </div>
+      <table style="margin-top:10px">
+        <thead><tr><th>المنتج</th><th>الكمية</th><th>التكلفة</th><th>الإجمالي</th><th></th></tr></thead>
+        <tbody id="poDraft"></tbody>
+      </table>
+      <div class="tot" id="poDraftTotal">الإجمالي: 0.00 ج.م</div>
+      <button class="ok" onclick="savePurchase()">حفظ أمر الشراء</button>
+      <div class="msg" id="poMsg"></div>
+    </div>
+
+    <div class="card">
+      <h2>أوامر الشراء</h2>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>التاريخ</th><th>المورد</th><th>الإجمالي</th><th>الحالة</th><th></th></tr></thead>
+          <tbody id="poRows"></tbody>
+        </table>
+      </div>
+      <p class="muted" id="poEmpty" style="display:none">مفيش أوامر شراء لسه.</p>
+    </div>
+
+    <div class="card">
+      <h2>المستحقات للموردين</h2>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>المورد</th><th>إجمالي المستلم</th><th>المدفوع</th><th>المتبقي</th></tr></thead>
+          <tbody id="spRows"></tbody>
+        </table>
+      </div>
+      <div class="row" style="justify-content:flex-start;gap:8px;margin-top:12px">
+        <select id="spSup" class="inline"></select>
+        <input id="spAmt" class="inline" type="number" min="0" step="0.01" value="0" style="width:120px">
+        <input id="spNote" class="inline" placeholder="ملاحظة أو رقم التحويل">
+        <button class="ok" onclick="recordSupplierPayment()">تسجيل دفعة</button>
+      </div>
+      <div class="msg" id="spMsg"></div>
+    </div>
+  </div>
+
+  <!-- ===== POS ===== -->
+  <div id="posTab">
+    <div class="card" id="shiftBar"></div>
+    <div class="row" style="align-items:flex-start">
+      <div style="flex:1;min-width:300px">
+        <div class="card">
+          <h2>إضافة منتج</h2>
+          <input id="posScan" class="inline" style="width:100%" placeholder="امسح الباركود أو اكتب الاسم ثم Enter" oninput="posSearch()" onkeydown="posScanKey(event)">
+          <div id="posResults" style="margin-top:8px"></div>
+        </div>
+        <div class="card">
+          <h2>السلة</h2>
+          <table>
+            <thead><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>خصم</th><th>الإجمالي</th><th></th></tr></thead>
+            <tbody id="posCart"></tbody>
+          </table>
+          <p class="muted" id="posCartEmpty">السلة فاضية</p>
+        </div>
+      </div>
+      <div style="flex:1;min-width:300px">
+        <div class="card">
+          <h2>خصم الفاتورة والكوبون</h2>
+          <select id="posInvType" class="inline" onchange="posTotals()"><option value="percent">%</option><option value="fixed">ج.م</option></select>
+          <input id="posInvVal" class="inline" type="number" min="0" step="0.01" value="0" oninput="posTotals()" style="width:110px">
+          <div style="margin-top:8px">
+            <input id="posCoupon" class="inline" placeholder="كود الكوبون">
+            <button class="light" onclick="posApplyCoupon()">تطبيق</button>
+            <button class="light" onclick="posClearCoupon()">إلغاء</button>
+          </div>
+          <div id="posCouponInfo" class="muted" style="margin-top:4px"></div>
+        </div>
+        <div class="card">
+          <div>قبل الخصم: <span id="posSub">0.00</span></div>
+          <div>الخصم: <span id="posDisc">0.00</span></div>
+          <div class="tot">المطلوب: <span id="posTotal">0.00</span> ج.م</div>
+        </div>
+        <div class="card">
+          <h2>الدفع</h2>
+          <div style="margin-bottom:8px">العميل (اختياري)<br><select id="posCustomer" class="inline" style="width:100%"></select></div>
+          <div style="margin-bottom:8px">
+            <button class="light" onclick="posPayAll('cash')">كله كاش</button>
+            <button class="light" onclick="posPayAll('insta')">كله انستاباي</button>
+            <button class="light" onclick="posPayAll('voda')">كله فودافون</button>
+          </div>
+          <table>
+            <tr><td>كاش</td><td><input id="posCash" class="inline" type="number" min="0" step="0.01" value="0" oninput="posTotals()" style="width:110px"></td><td></td></tr>
+            <tr><td>انستاباي</td><td><input id="posInsta" class="inline" type="number" min="0" step="0.01" value="0" oninput="posTotals()" style="width:110px"></td><td><input id="posRInsta" class="inline" placeholder="رقم العملية"></td></tr>
+            <tr><td>فودافون كاش</td><td><input id="posVoda" class="inline" type="number" min="0" step="0.01" value="0" oninput="posTotals()" style="width:110px"></td><td><input id="posRVoda" class="inline" placeholder="رقم العملية"></td></tr>
+          </table>
+          <div id="posPayInfo" class="muted" style="margin-top:6px"></div>
+          <button class="ok" id="posSellBtn" style="width:100%;padding:14px;font-size:17px;margin-top:10px" onclick="posCheckout()">تأكيد البيع وطباعة الفاتورة</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row">
+        <h2 style="margin:0">مبيعات اليوم (<span id="posTodayCount">0</span>)</h2>
+        <span class="muted" id="posTodayTotal"></span>
+      </div>
+      <table style="margin-top:8px">
+        <thead><tr><th>الوقت</th><th>الإجمالي</th><th>الدفع</th><th></th></tr></thead>
+        <tbody id="posToday"></tbody>
+      </table>
+    </div>
+    <div class="msg" id="posMsg"></div>
   </div>
 
   <!-- ===== ORDERS ===== -->
@@ -160,6 +336,7 @@
   </div>
 </div>
 
+<div id="printArea"></div>
 <script>
 const SUPABASE_URL = 'https://igtgqlhuumfqxtbzgnuq.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_zaFIX1_KmXt7LJnaGZpmjQ_7uBg3EkY';
@@ -181,7 +358,7 @@ async function init() {
 function showAdmin() {
   $('loginCard').classList.add('hidden');
   $('admin').classList.remove('hidden');
-  showTab('orders');
+  showTab('pos');
 }
 function showLogin() {
   $('loginCard').classList.remove('hidden');
@@ -202,11 +379,14 @@ async function logout() {
 
 /* ---------- tabs ---------- */
 function showTab(name) {
-  const map = { orders: 'ordersTab', products: 'productsTab', settings: 'settingsTab', coupons: 'couponsTab' };
+  const map = { pos: 'posTab', orders: 'ordersTab', products: 'productsTab', settings: 'settingsTab', coupons: 'couponsTab', customers: 'customersTab', suppliers: 'suppliersTab' };
   Object.keys(map).forEach(k => {
     $(map[k]).classList.toggle('hidden', k !== name);
     $('tab' + k.charAt(0).toUpperCase() + k.slice(1)).className = k === name ? 'on' : 'light';
   });
+  if (name === 'pos') initPos();
+  if (name === 'customers') loadCustomers();
+  if (name === 'suppliers') loadSuppliersAll();
   if (name === 'orders') loadOrders();
   if (name === 'products') loadProducts();
   if (name === 'settings') loadSettings();
@@ -464,6 +644,618 @@ async function deleteCoupon(i) {
   const { error } = await sb.from('coupons').delete().eq('code', c.code);
   if (error) { say('cMsg', 'حصلت مشكلة: ' + error.message); return; }
   loadCoupons();
+}
+
+/* =================== POINT OF SALE =================== */
+const STORE_NAME = 'خرزه - المحل الرئيسي';
+let posShift = null, posProducts = [], posCoupons = [], posCart = [], posCouponObj = null, posTotalsObj = { sub: 0, disc: 0, total: 0 }, posTodaySales = [];
+
+function sumBy(arr, f) { return arr.reduce((a, x) => a + f(x), 0); }
+function lineTotal(l) {
+  const base = l.price * l.qty;
+  const d = l.dType === 'percent' ? base * (l.dVal || 0) / 100 : (l.dVal || 0);
+  return Math.max(0, base - d);
+}
+
+async function initPos() {
+  await Promise.all([loadPosProducts(), loadPosCoupons(), loadShift(), loadTodaySales(), refreshPosCustomers()]);
+  renderCart();
+  posTotals();
+}
+
+async function loadPosProducts() {
+  const { data, error } = await sb.from('products').select('*').eq('active', true).gt('qty', 0).order('name');
+  if (error) { say('posMsg', 'مش قادر أحمّل المنتجات: ' + error.message); return; }
+  posProducts = data || [];
+}
+
+async function loadPosCoupons() {
+  const { data } = await sb.from('coupons').select('*').eq('active', true);
+  posCoupons = data || [];
+}
+
+async function loadShift() {
+  const { data } = await sb.from('shifts').select('*').is('closed_at', null).order('opened_at', { ascending: false }).limit(1).maybeSingle();
+  posShift = data || null;
+  renderShift();
+}
+
+function renderShift() {
+  $('shiftBar').innerHTML = posShift
+    ? `<span class="pill s-shipped">الوردية مفتوحة</span>
+       الكاشير: <b>${esc(posShift.cashier)}</b> — الكاش الافتتاحي: ${fmt(posShift.opening_cash)}
+       <button class="danger" onclick="closeShift()">قفل الوردية</button>`
+    : `<span class="pill s-cancelled">مفيش وردية مفتوحة</span>
+       اسم الكاشير <input id="posCashier" class="inline">
+       الكاش الافتتاحي <input id="posOpenCash" class="inline" type="number" min="0" step="0.01" value="0" style="width:110px">
+       <button onclick="openShift()">فتح الوردية</button>`;
+}
+
+async function openShift() {
+  const cashier = $('posCashier').value.trim();
+  if (!cashier) { say('posMsg', 'اكتب اسم الكاشير'); return; }
+  const row = {
+    id: Date.now(), cashier, store_name: STORE_NAME,
+    opened_at: new Date().toISOString(),
+    opening_cash: parseFloat($('posOpenCash').value) || 0
+  };
+  const { error } = await sb.from('shifts').insert(row);
+  if (error) { say('posMsg', 'حصلت مشكلة: ' + error.message); return; }
+  say('posMsg', 'اتفتحت الوردية');
+  loadShift();
+}
+
+async function closeShift() {
+  if (!posShift) return;
+  const { data: sales } = await sb.from('sales').select('cash_net').eq('shift_id', posShift.id);
+  const cashNet = sumBy(sales || [], s => Number(s.cash_net) || 0);
+  const expected = Number(posShift.opening_cash) + cashNet;
+  const input = prompt('الكاش الفعلي في الدرج:', fmt(expected));
+  if (input === null) return;
+  const counted = parseFloat(input);
+  if (isNaN(counted)) { say('posMsg', 'ادخل رقم صحيح'); return; }
+  const diff = counted - expected;
+  const { error } = await sb.from('shifts').update({
+    closed_at: new Date().toISOString(), counted_cash: counted, expected_cash: expected, diff
+  }).eq('id', posShift.id);
+  if (error) { say('posMsg', 'حصلت مشكلة: ' + error.message); return; }
+  alert(`تم قفل الوردية.\nالمتوقع في الدرج: ${fmt(expected)}\nالفعلي: ${fmt(counted)}\nالفرق: ${fmt(diff)}`);
+  loadShift();
+}
+
+/* ----- search & scan ----- */
+function posMatches(q) {
+  return posProducts.filter(p =>
+    [p.name, p.category, p.barcode, p.sku, p.color, p.size].join(' ').toLowerCase().includes(q)
+  ).slice(0, 12);
+}
+
+function posSearch() {
+  const q = $('posScan').value.trim().toLowerCase();
+  if (!q) { $('posResults').innerHTML = ''; return; }
+  const list = posMatches(q);
+  $('posResults').innerHTML = list.length
+    ? list.map(p => `<button class="light" style="display:block;width:100%;text-align:right;margin:3px 0" onclick="posAdd(${p.id})">
+        ${esc(p.name)} ${esc(p.color || '')} ${esc(p.size || '')} — ${fmt(p.price)} (متاح ${p.qty})</button>`).join('')
+    : '<span class="muted">مفيش نتائج</span>';
+}
+
+function posScanKey(e) {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const q = e.target.value.trim().toLowerCase();
+  if (!q) return;
+  const exact = posProducts.find(p => (p.barcode || '').toLowerCase() === q || (p.sku || '').toLowerCase() === q);
+  if (exact) posAdd(exact.id);
+  else {
+    const m = posMatches(q);
+    if (m.length === 1) posAdd(m[0].id);
+    else { say('posMsg', m.length ? 'في أكتر من نتيجة، اختار من القائمة' : 'المنتج مش موجود'); return; }
+  }
+  e.target.value = '';
+  $('posResults').innerHTML = '';
+}
+
+/* ----- cart ----- */
+function posAdd(id) {
+  if (!posShift) { say('posMsg', 'افتح الوردية الأول'); return; }
+  const p = posProducts.find(x => x.id === Number(id));
+  if (!p) return;
+  const line = posCart.find(l => l.id === p.id);
+  const current = line ? line.qty : 0;
+  if (current + 1 > p.qty) { say('posMsg', `المتاح من ${p.name} هو ${p.qty} بس`); return; }
+  if (line) line.qty++;
+  else posCart.push({ id: p.id, sku: p.barcode || p.sku, name: p.name, color: p.color || '', price: p.price, qty: 1, dType: 'percent', dVal: 0 });
+  say('posMsg', '');
+  renderCart();
+  posTotals();
+}
+
+function posChgQty(i, d) {
+  const l = posCart[i];
+  const p = posProducts.find(x => x.id === l.id);
+  const nq = l.qty + d;
+  if (nq <= 0) { posCart.splice(i, 1); }
+  else if (p && nq > p.qty) { say('posMsg', `المتاح ${p.qty} بس`); return; }
+  else l.qty = nq;
+  renderCart();
+  posTotals();
+}
+
+function posSetLine(i, key, val) {
+  posCart[i][key] = key === 'dVal' ? (parseFloat(val) || 0) : val;
+  renderCart();
+  posTotals();
+}
+
+function posRemoveLine(i) {
+  posCart.splice(i, 1);
+  renderCart();
+  posTotals();
+}
+
+function renderCart() {
+  $('posCart').innerHTML = posCart.map((l, i) => `
+    <tr>
+      <td>${esc(l.name)} ${esc(l.color)}<div class="muted">${esc(l.sku)}</div></td>
+      <td>
+        <button class="light" onclick="posChgQty(${i},-1)">-</button>
+        ${l.qty}
+        <button class="light" onclick="posChgQty(${i},1)">+</button>
+      </td>
+      <td>${fmt(l.price)}</td>
+      <td>
+        <select class="inline" onchange="posSetLine(${i},'dType',this.value)">
+          <option value="percent" ${l.dType === 'percent' ? 'selected' : ''}>%</option>
+          <option value="fixed" ${l.dType === 'fixed' ? 'selected' : ''}>ج.م</option>
+        </select>
+        <input class="inline" type="number" min="0" step="0.01" value="${l.dVal}" style="width:70px" onchange="posSetLine(${i},'dVal',this.value)">
+      </td>
+      <td>${fmt(lineTotal(l))}</td>
+      <td><button class="danger" onclick="posRemoveLine(${i})">×</button></td>
+    </tr>`).join('');
+  $('posCartEmpty').style.display = posCart.length ? 'none' : 'block';
+}
+
+/* ----- totals & coupons ----- */
+function posTotals() {
+  const sub = sumBy(posCart, lineTotal);
+  const type = $('posInvType').value;
+  const v = parseFloat($('posInvVal').value) || 0;
+  let d = type === 'percent' ? sub * v / 100 : v;
+  if (posCouponObj) d += posCouponObj.type === 'percent' ? sub * posCouponObj.value / 100 : posCouponObj.value;
+  d = Math.min(sub, Math.max(0, d));
+  const total = sub - d;
+  posTotalsObj = { sub, disc: d, total };
+  $('posSub').textContent = fmt(sub);
+  $('posDisc').textContent = fmt(d);
+  $('posTotal').textContent = fmt(total);
+
+  const paid = (parseFloat($('posCash').value) || 0) + (parseFloat($('posInsta').value) || 0) + (parseFloat($('posVoda').value) || 0);
+  $('posPayInfo').textContent = paid + 0.001 >= total
+    ? `المدفوع: ${fmt(paid)} — الباقي للعميل: ${fmt(paid - total)}`
+    : `المدفوع: ${fmt(paid)} — ناقص: ${fmt(total - paid)}`;
+}
+
+function posApplyCoupon() {
+  const code = $('posCoupon').value.trim().toUpperCase();
+  const c = posCoupons.find(x => (x.code || '').toUpperCase() === code);
+  if (!c) { say('posMsg', 'الكود غير صالح أو متوقف'); return; }
+  posCouponObj = c;
+  $('posCouponInfo').textContent = `الكوبون ${c.code}: خصم ${c.type === 'percent' ? c.value + '%' : fmt(c.value) + ' ج.م'}`;
+  posTotals();
+}
+
+function posClearCoupon() {
+  posCouponObj = null;
+  $('posCoupon').value = '';
+  $('posCouponInfo').textContent = '';
+  posTotals();
+}
+
+function posPayAll(m) {
+  const t = posTotalsObj.total;
+  $('posCash').value = m === 'cash' ? fmt(t) : 0;
+  $('posInsta').value = m === 'insta' ? fmt(t) : 0;
+  $('posVoda').value = m === 'voda' ? fmt(t) : 0;
+  posTotals();
+}
+
+/* ----- checkout ----- */
+async function posCheckout() {
+  if (!posShift) { say('posMsg', 'افتح الوردية الأول'); return; }
+  if (!posCart.length) { say('posMsg', 'السلة فاضية'); return; }
+  posTotals();
+  const total = posTotalsObj.total;
+
+  // تأكيد الكميات من قاعدة البيانات قبل البيع
+  const ids = posCart.map(l => l.id);
+  const { data: fresh, error: fe } = await sb.from('products').select('id, qty').in('id', ids);
+  if (fe) { say('posMsg', 'حصلت مشكلة: ' + fe.message); return; }
+  const freshQty = Object.fromEntries((fresh || []).map(p => [p.id, p.qty]));
+  for (const l of posCart) {
+    if ((freshQty[l.id] ?? 0) < l.qty) { say('posMsg', `الكمية المتاحة من ${l.name} دلوقتي ${freshQty[l.id] ?? 0}`); await loadPosProducts(); renderCart(); return; }
+  }
+
+  const cash = parseFloat($('posCash').value) || 0;
+  const insta = parseFloat($('posInsta').value) || 0;
+  const voda = parseFloat($('posVoda').value) || 0;
+  const rInsta = $('posRInsta').value.trim();
+  const rVoda = $('posRVoda').value.trim();
+  const paid = cash + insta + voda;
+  if (paid + 0.001 < total) { say('posMsg', 'المدفوع أقل من الإجمالي'); return; }
+  if (insta > 0 && !rInsta) { say('posMsg', 'اكتب رقم عملية انستاباي'); return; }
+  if (voda > 0 && !rVoda) { say('posMsg', 'اكتب رقم عملية فودافون كاش'); return; }
+  const change = Math.round((paid - total) * 100) / 100;
+  if (change > cash + 0.001) { say('posMsg', 'الباقي بيتدفع كاش بس، زوّد الكاش أو قلل الإلكتروني'); return; }
+
+  const btn = $('posSellBtn');
+  btn.disabled = true;
+  const sale = {
+    id: Date.now(),
+    shift_id: posShift.id,
+    date: new Date().toISOString(),
+    items: posCart.map(l => ({ id: l.id, sku: l.sku, name: l.name, color: l.color, qty: l.qty, price: l.price, discount: l.dType + ':' + l.dVal, lineTotal: lineTotal(l) })),
+    subtotal: posTotalsObj.sub,
+    invoice_discount: posTotalsObj.disc,
+    coupon: posCouponObj ? posCouponObj.code : null,
+    total,
+    payments: { cash, instapay: insta, vodafone: voda },
+    refs: { instapay: rInsta, vodafone: rVoda },
+    change,
+    cash_net: cash - change,
+    source: 'pos',
+    customer_id: Number($('posCustomer').value) || null
+  };
+
+  const { error } = await sb.from('sales').insert(sale);
+  if (error) { say('posMsg', 'حصلت مشكلة وماتسجلش البيع: ' + error.message); btn.disabled = false; return; }
+
+  // خصم المخزون
+  for (const l of posCart) {
+    await sb.from('products').update({ qty: Math.max(0, freshQty[l.id] - l.qty) }).eq('id', l.id);
+  }
+
+  printReceipt(sale);
+
+  posCart = [];
+  $('posCustomer').value = '';
+  posClearCoupon();
+  ['posCash', 'posInsta', 'posVoda'].forEach(id => $(id).value = 0);
+  $('posRInsta').value = '';
+  $('posRVoda').value = '';
+  $('posInvVal').value = 0;
+  say('posMsg', 'تم البيع ✔');
+  btn.disabled = false;
+  await loadPosProducts();
+  await loadTodaySales();
+  renderCart();
+  posTotals();
+  $('posScan').focus();
+}
+
+/* ----- receipt ----- */
+function printReceipt(s) {
+  const pays = [];
+  if (s.payments.cash) pays.push(`<div class="rc-line"><span>كاش</span><span>${fmt(s.payments.cash)}</span></div>`);
+  if (s.payments.instapay) pays.push(`<div class="rc-line"><span>انستاباي (${esc(s.refs.instapay)})</span><span>${fmt(s.payments.instapay)}</span></div>`);
+  if (s.payments.vodafone) pays.push(`<div class="rc-line"><span>فودافون (${esc(s.refs.vodafone)})</span><span>${fmt(s.payments.vodafone)}</span></div>`);
+  $('printArea').innerHTML = `
+    <div style="text-align:center"><b>${esc(STORE_NAME)}</b><br>${new Date(s.date).toLocaleString('ar-EG')}<br>فاتورة #${String(s.id).slice(-6)}</div>
+    <div class="rc-hr"></div>
+    ${s.items.map(i => `<div>${esc(i.name)} ${esc(i.color)}</div><div class="rc-line"><span>${i.qty} × ${fmt(i.price)}</span><span>${fmt(i.lineTotal)}</span></div>`).join('')}
+    <div class="rc-hr"></div>
+    <div class="rc-line"><span>قبل الخصم</span><span>${fmt(s.subtotal)}</span></div>
+    <div class="rc-line"><span>الخصم${s.coupon ? ' (' + esc(s.coupon) + ')' : ''}</span><span>${fmt(s.invoice_discount)}</span></div>
+    <div class="rc-line"><b>المطلوب</b><b>${fmt(s.total)}</b></div>
+    <div class="rc-hr"></div>
+    ${pays.join('')}
+    <div class="rc-line"><span>الباقي</span><span>${fmt(s.change)}</span></div>
+    <div class="rc-hr"></div>
+    <div style="text-align:center">شكراً لزيارتكم - خرزه</div>`;
+  window.print();
+}
+
+/* ----- today's sales ----- */
+async function loadTodaySales() {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const { data, error } = await sb.from('sales').select('*').gte('date', start.toISOString()).order('date', { ascending: false }).limit(200);
+  if (error) { say('posMsg', 'مش قادر أحمّل مبيعات اليوم: ' + error.message); return; }
+  posTodaySales = data || [];
+  $('posTodayCount').textContent = posTodaySales.length;
+  $('posTodayTotal').textContent = 'الإجمالي: ' + fmt(sumBy(posTodaySales, s => Number(s.total) || 0)) + ' ج.م';
+  $('posToday').innerHTML = posTodaySales.map(s => {
+    const m = [];
+    if (s.payments && s.payments.cash) m.push('كاش');
+    if (s.payments && s.payments.instapay) m.push('انستاباي');
+    if (s.payments && s.payments.vodafone) m.push('فودافون');
+    return `<tr>
+      <td>${new Date(s.date).toLocaleTimeString('ar-EG')}</td>
+      <td>${fmt(s.total)}</td>
+      <td>${m.join(' + ')}</td>
+      <td><button class="light" onclick="posReprint(${s.id})">طباعة</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function posReprint(id) {
+  const s = posTodaySales.find(x => Number(x.id) === Number(id));
+  if (s) printReceipt(s);
+}
+
+/* =================== CUSTOMERS =================== */
+let customers = [], custStats = {}, editingCustomerId = null;
+
+async function loadCustomers() {
+  const { data, error } = await sb.from('customers').select('*').order('name');
+  if (error) { say('cuListMsg', 'مش قادر أحمّل العملاء: ' + error.message); return; }
+  customers = data || [];
+  const { data: sales } = await sb.from('sales').select('customer_id,total').not('customer_id', 'is', null);
+  custStats = {};
+  (sales || []).forEach(x => {
+    const k = String(x.customer_id);
+    if (!custStats[k]) custStats[k] = { count: 0, total: 0 };
+    custStats[k].count++;
+    custStats[k].total += Number(x.total) || 0;
+  });
+  renderCustomers();
+}
+
+function renderCustomers() {
+  const q = $('cuSearch').value.trim().toLowerCase();
+  const list = customers.filter(c => !q || (c.name + ' ' + c.phone).toLowerCase().includes(q));
+  $('cuCount').textContent = customers.length;
+  $('cuRows').innerHTML = list.map(c => {
+    const st = custStats[String(c.id)] || { count: 0, total: 0 };
+    return `<tr>
+      <td>${esc(c.name)}</td>
+      <td>${esc(c.phone)}</td>
+      <td>${esc(c.address || '')}</td>
+      <td>${st.count}</td>
+      <td>${fmt(st.total)}</td>
+      <td>
+        <button class="light" onclick="editCustomer(${c.id})">تعديل</button>
+        <button class="danger" onclick="deleteCustomer(${c.id})">حذف</button>
+      </td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="6" class="muted">مفيش عملاء</td></tr>';
+}
+
+async function saveCustomer() {
+  const name = $('cuName').value.trim();
+  const phone = $('cuPhone').value.trim();
+  if (!name || !phone) { say('cuMsg', 'الاسم والتليفون مطلوبين'); return; }
+  const data = { name, phone, address: $('cuAddr').value.trim(), note: $('cuNote').value.trim() };
+  let error;
+  if (editingCustomerId) {
+    ({ error } = await sb.from('customers').update(data).eq('id', editingCustomerId));
+  } else {
+    ({ error } = await sb.from('customers').insert({ id: Date.now(), ...data }));
+  }
+  if (error) { say('cuMsg', error.code === '23505' ? 'التليفون ده موجود لعميل تاني' : 'حصلت مشكلة: ' + error.message); return; }
+  say('cuMsg', editingCustomerId ? 'تم تعديل العميل' : 'تمت إضافة العميل');
+  resetCustomerForm(true);
+  loadCustomers();
+  refreshPosCustomers();
+}
+
+function editCustomer(id) {
+  const c = customers.find(x => x.id === id);
+  if (!c) return;
+  editingCustomerId = id;
+  $('cuName').value = c.name || '';
+  $('cuPhone').value = c.phone || '';
+  $('cuAddr').value = c.address || '';
+  $('cuNote').value = c.note || '';
+  $('cuTitle').textContent = 'تعديل عميل';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function resetCustomerForm(keepMsg) {
+  editingCustomerId = null;
+  ['cuName', 'cuPhone', 'cuAddr', 'cuNote'].forEach(id => $(id).value = '');
+  $('cuTitle').textContent = 'إضافة عميل';
+  if (!keepMsg) say('cuMsg', '');
+}
+
+async function deleteCustomer(id) {
+  const st = custStats[String(id)];
+  if (st && st.count > 0) { say('cuListMsg', 'العميل ليه فواتير مسجلة، مينفعش يتحذف'); return; }
+  const c = customers.find(x => x.id === id);
+  if (!c || !confirm('تحذف "' + c.name + '"؟')) return;
+  const { error } = await sb.from('customers').delete().eq('id', id);
+  if (error) { say('cuListMsg', 'حصلت مشكلة: ' + error.message); return; }
+  loadCustomers();
+  refreshPosCustomers();
+}
+
+async function refreshPosCustomers() {
+  const { data } = await sb.from('customers').select('id,name,phone').order('name');
+  const cur = $('posCustomer').value;
+  $('posCustomer').innerHTML = '<option value="">بدون عميل</option>' +
+    (data || []).map(c => `<option value="${c.id}">${esc(c.name)} - ${esc(c.phone)}</option>`).join('');
+  $('posCustomer').value = cur;
+}
+
+/* =================== SUPPLIERS & PURCHASES =================== */
+let suppliers = [], purchaseOrders = [], supplierPayments = [], allProducts = [], poDraftLines = [];
+
+async function loadSuppliersAll() {
+  await Promise.all([loadSuppliers(), loadAllProducts(), loadPurchases(), loadSupplierPayments()]);
+  renderBalances();
+}
+
+async function loadSuppliers() {
+  const { data, error } = await sb.from('suppliers').select('*').order('name');
+  if (error) { say('suMsg', 'مش قادر أحمّل الموردين: ' + error.message); return; }
+  suppliers = data || [];
+  $('suRows').innerHTML = suppliers.map(x => `
+    <tr>
+      <td>${esc(x.name)}</td><td>${esc(x.phone || '')}</td><td>${esc(x.address || '')}</td><td>${esc(x.terms || '')}</td>
+      <td><button class="danger" onclick="deleteSupplier(${x.id})">حذف</button></td>
+    </tr>`).join('') || '<tr><td colspan="5" class="muted">مفيش موردين</td></tr>';
+  const opts = suppliers.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('') || '<option value="">ضيف مورد الأول</option>';
+  $('poSup').innerHTML = opts;
+  $('spSup').innerHTML = opts;
+}
+
+function supName(id) {
+  const s = suppliers.find(x => String(x.id) === String(id));
+  return s ? s.name : '—';
+}
+
+async function saveSupplier() {
+  const name = $('suName').value.trim();
+  if (!name) { say('suMsg', 'اكتب اسم المورد'); return; }
+  const { error } = await sb.from('suppliers').insert({
+    id: Date.now(), name,
+    phone: $('suPhone').value.trim(),
+    address: $('suAddr').value.trim(),
+    terms: $('suTerms').value
+  });
+  if (error) { say('suMsg', 'حصلت مشكلة: ' + error.message); return; }
+  ['suName', 'suPhone', 'suAddr'].forEach(id => $(id).value = '');
+  say('suMsg', 'تمت إضافة المورد');
+  loadSuppliersAll();
+}
+
+async function deleteSupplier(id) {
+  if (purchaseOrders.some(o => o.supplier_id === id) || supplierPayments.some(p => p.supplier_id === id)) {
+    say('suMsg', 'المورد ده ليه أوامر شراء أو دفعات، مينفعش يتحذف');
+    return;
+  }
+  if (!confirm('تحذف المورد؟')) return;
+  const { error } = await sb.from('suppliers').delete().eq('id', id);
+  if (error) { say('suMsg', 'حصلت مشكلة: ' + error.message); return; }
+  loadSuppliersAll();
+}
+
+async function loadAllProducts() {
+  const { data } = await sb.from('products').select('id,name,color,size,cost,qty').order('name');
+  allProducts = data || [];
+  $('poProd').innerHTML = allProducts.map(p =>
+    `<option value="${p.id}">${esc(p.name)} ${esc(p.color || '')} ${esc(p.size || '')}</option>`).join('')
+    || '<option value="">مفيش منتجات</option>';
+}
+
+function addPurchaseLine() {
+  const pid = Number($('poProd').value);
+  const p = allProducts.find(x => x.id === pid);
+  const qty = parseInt($('poQty').value) || 0;
+  const cost = parseFloat($('poCost').value) || 0;
+  if (!p) { say('poMsg', 'اختار منتج'); return; }
+  if (qty <= 0) { say('poMsg', 'الكمية لازم تكون أكبر من صفر'); return; }
+  poDraftLines.push({ productId: p.id, name: [p.name, p.color, p.size].filter(Boolean).join(' / '), qty, unitCost: cost });
+  $('poQty').value = 1;
+  $('poCost').value = 0;
+  say('poMsg', '');
+  renderPurchaseDraft();
+}
+
+function delPurchaseLine(i) {
+  poDraftLines.splice(i, 1);
+  renderPurchaseDraft();
+}
+
+function renderPurchaseDraft() {
+  $('poDraft').innerHTML = poDraftLines.map((l, i) => `
+    <tr><td>${esc(l.name)}</td><td>${l.qty}</td><td>${fmt(l.unitCost)}</td><td>${fmt(l.qty * l.unitCost)}</td>
+    <td><button class="danger" onclick="delPurchaseLine(${i})">×</button></td></tr>`).join('');
+  $('poDraftTotal').textContent = 'الإجمالي: ' + fmt(sumBy(poDraftLines, l => l.qty * l.unitCost)) + ' ج.م';
+}
+
+async function savePurchase() {
+  const sid = Number($('poSup').value);
+  if (!sid) { say('poMsg', 'اختار المورد'); return; }
+  if (!poDraftLines.length) { say('poMsg', 'ضيف منتجات للأمر'); return; }
+  const { error } = await sb.from('purchase_orders').insert({
+    id: Date.now(), supplier_id: sid, date: new Date().toISOString(),
+    lines: poDraftLines, total: sumBy(poDraftLines, l => l.qty * l.unitCost), status: 'ordered'
+  });
+  if (error) { say('poMsg', 'حصلت مشكلة: ' + error.message); return; }
+  poDraftLines = [];
+  renderPurchaseDraft();
+  say('poMsg', 'تم حفظ أمر الشراء');
+  loadPurchases();
+}
+
+async function loadPurchases() {
+  const { data, error } = await sb.from('purchase_orders').select('*').order('date', { ascending: false });
+  if (error) { say('poMsg', 'مش قادر أحمّل الأوامر: ' + error.message); return; }
+  purchaseOrders = data || [];
+  renderPurchases();
+  renderBalances();
+}
+
+function renderPurchases() {
+  $('poEmpty').style.display = purchaseOrders.length ? 'none' : 'block';
+  $('poRows').innerHTML = purchaseOrders.map(o => `
+    <tr>
+      <td>${new Date(o.date).toLocaleDateString('ar-EG')}</td>
+      <td>${esc(supName(o.supplier_id))}</td>
+      <td>${fmt(o.total)}</td>
+      <td><span class="pill ${o.status === 'received' ? 's-shipped' : 's-pending'}">${o.status === 'received' ? 'مستلم' : 'مطلوب'}</span></td>
+      <td>
+        ${o.status === 'ordered' ? `<button class="ok" onclick="receivePurchase(${o.id})">استلام البضاعة</button>
+        <button class="danger" onclick="deletePurchase(${o.id})">حذف</button>` : ''}
+      </td>
+    </tr>`).join('');
+}
+
+async function receivePurchase(id) {
+  const o = purchaseOrders.find(x => x.id === id);
+  if (!o || o.status !== 'ordered') return;
+  if (!confirm('تأكيد استلام البضاعة؟ الكميات هتزيد في المخزون.')) return;
+  const now = new Date().toISOString();
+  for (const l of (o.lines || [])) {
+    const { data: p } = await sb.from('products').select('qty').eq('id', l.productId).maybeSingle();
+    if (p) await sb.from('products').update({ qty: (p.qty || 0) + l.qty, cost: l.unitCost }).eq('id', l.productId);
+    await sb.from('cost_history').insert({ date: now, supplier_id: o.supplier_id, product_id: l.productId, cost: l.unitCost, order_id: o.id });
+  }
+  const { error } = await sb.from('purchase_orders').update({ status: 'received', received_at: now }).eq('id', id);
+  if (error) { say('poMsg', 'حصلت مشكلة: ' + error.message); return; }
+  say('poMsg', 'تم الاستلام وتحديث المخزون');
+  loadPurchases();
+  loadAllProducts();
+}
+
+async function deletePurchase(id) {
+  const o = purchaseOrders.find(x => x.id === id);
+  if (!o || o.status !== 'ordered' || !confirm('تحذف أمر الشراء؟')) return;
+  const { error } = await sb.from('purchase_orders').delete().eq('id', id);
+  if (error) { say('poMsg', 'حصلت مشكلة: ' + error.message); return; }
+  loadPurchases();
+}
+
+async function loadSupplierPayments() {
+  const { data } = await sb.from('supplier_payments').select('*');
+  supplierPayments = data || [];
+  renderBalances();
+}
+
+function renderBalances() {
+  $('spRows').innerHTML = suppliers.map(s => {
+    const received = sumBy(purchaseOrders.filter(o => o.supplier_id === s.id && o.status === 'received'), o => Number(o.total) || 0);
+    const paid = sumBy(supplierPayments.filter(p => p.supplier_id === s.id), p => Number(p.amount) || 0);
+    const bal = received - paid;
+    return `<tr><td>${esc(s.name)}</td><td>${fmt(received)}</td><td>${fmt(paid)}</td><td class="${bal > 0 ? 'low' : ''}">${fmt(bal)}</td></tr>`;
+  }).join('') || '<tr><td colspan="4" class="muted">مفيش موردين</td></tr>';
+}
+
+async function recordSupplierPayment() {
+  const sid = Number($('spSup').value);
+  const amt = parseFloat($('spAmt').value) || 0;
+  if (!sid) { say('spMsg', 'اختار المورد'); return; }
+  if (amt <= 0) { say('spMsg', 'اكتب مبلغ صحيح'); return; }
+  const { error } = await sb.from('supplier_payments').insert({
+    id: Date.now(), date: new Date().toISOString(), supplier_id: sid, amount: amt, note: $('spNote').value.trim()
+  });
+  if (error) { say('spMsg', 'حصلت مشكلة: ' + error.message); return; }
+  $('spAmt').value = 0;
+  $('spNote').value = '';
+  say('spMsg', 'تم تسجيل الدفعة');
+  loadSupplierPayments();
 }
 
 init();
