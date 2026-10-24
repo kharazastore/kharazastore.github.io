@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>خرزه - المتجر</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root { --brand: #8b2252; --soft: #faf6f8; --ink: #333; }
+  * { box-sizing: border-box; }
+  body { font-family: Tahoma, Arial, sans-serif; background: var(--soft); margin: 0; color: var(--ink); }
+  header { background: #000; color: #fff; padding: 20px 16px; text-align: center; }
+  header .logo { width: min(420px, 80%); height: auto; display: block; margin: 0 auto; }
+  header p { margin: 4px 0 0; font-size: 13px; opacity: .9; }
+  main { max-width: 1000px; margin: 0 auto; padding: 16px; }
+  .bar { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-bottom: 14px; }
+  select, input, textarea { padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; font-family: inherit; width: 100%; }
+  .cartBtn { background: var(--brand); color: #fff; border: 0; padding: 10px 16px; border-radius: 8px; font-size: 15px; cursor: pointer; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+  .prod { background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 6px rgba(0,0,0,.08); display: flex; flex-direction: column; }
+  .media { width: 100%; height: 300px; background: #000; display: flex; align-items: center; justify-content: center; }
+  .media iframe, .media video { width: 100%; height: 100%; border: 0; object-fit: cover; }
+  .media img { width: 100%; height: 100%; object-fit: cover; }
+  .noimg { background: #000; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .noimg img { width: 100%; height: 100%; object-fit: contain; }
+  .pbody { padding: 12px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .pname { font-weight: bold; font-size: 15px; }
+  .pmeta { font-size: 12px; color: #888; }
+  .pprice { color: var(--brand); font-weight: bold; font-size: 16px; }
+  .order { background: #25D366; color: #fff; border: 0; padding: 11px; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; margin-top: 4px; }
+  .order:disabled, .add:disabled { background: #ccc; cursor: not-allowed; }
+  .add { background: #fff; color: var(--brand); border: 1px solid var(--brand); padding: 8px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+  .card { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 1px 6px rgba(0,0,0,.08); margin-top: 18px; }
+  h2 { color: var(--brand); font-size: 18px; margin: 0 0 12px; }
+  .line { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid #eee; align-items: center; }
+  .qty button { background: #eee; border: 0; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; font-size: 16px; }
+  .tot { font-size: 20px; font-weight: bold; color: var(--brand); margin-top: 10px; }
+  .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+  .fields label { font-size: 14px; display: block; }
+  .pay { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .pay label { background: #f7eef3; padding: 10px 12px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+  .info { background: #fff8e1; border-radius: 8px; padding: 10px; margin-top: 10px; font-size: 14px; }
+  .send { width: 100%; background: #25D366; color: #fff; border: 0; padding: 14px; border-radius: 10px; font-size: 17px; cursor: pointer; margin-top: 14px; }
+  .send:disabled { background: #ccc; cursor: not-allowed; }
+  .muted { color: #888; font-size: 13px; }
+  .done { background: #d5f5e3; border-radius: 10px; padding: 14px; margin-top: 14px; }
+  .hidden { display: none; }
+  footer { text-align: center; color: #888; font-size: 12px; padding: 24px; }
+</style>
+</head>
+<body>
+
+<header>
+  <img class="logo" src="logo.jpg" alt="خرزه براند">
+  <p>شنط سواريه، شنط موبايل، أحزمة، كفرات، Breloques، فوانيس وتوزيعات</p>
+</header>
+
+<main>
+  <div class="bar">
+    <select id="catFilter" style="max-width:240px" onchange="renderProducts()">
+      <option value="">كل الفئات</option>
+    </select>
+    <button class="cartBtn" onclick="document.getElementById('checkout').scrollIntoView({behavior:'smooth'})">
+      السلة (<span id="cartCount">0</span>)
+    </button>
+  </div>
+
+  <div class="grid" id="products"><p class="muted">جاري تحميل المنتجات...</p></div>
+
+  <section class="card" id="checkout">
+    <h2>سلة الشراء</h2>
+    <div id="cartLines"></div>
+    <p id="cartEmpty" class="muted">السلة فاضية، اختار المنتجات اللي عاوزها.</p>
+    <div class="tot">الإجمالي: <span id="cartTotal">0.00</span> ج.م</div>
+  </section>
+
+  <section class="card" id="orderForm">
+    <h2>بيانات الطلب</h2>
+    <div class="fields">
+      <label>الاسم *<input id="cName" placeholder="اسمك"></label>
+      <label>رقم التليفون *<input id="cPhone" placeholder="01xxxxxxxxx" inputmode="tel"></label>
+      <label style="grid-column: 1 / -1">العنوان بالتفصيل *<textarea id="cAddr" rows="2" placeholder="المحافظة، المنطقة، الشارع، رقم العمارة"></textarea></label>
+      <label style="grid-column: 1 / -1">ملاحظات (اختياري)<input id="cNote" placeholder="مثلاً: لون معين أو ميعاد مناسب"></label>
+    </div>
+
+    <h2 style="margin-top:18px">طريقة الدفع</h2>
+    <div class="pay" id="payOpts"></div>
+    <div id="payInfo" class="info hidden"></div>
+
+    <button class="send" id="sendBtn" onclick="sendOrder()" disabled>ابعت الطلب</button>
+    <p class="muted" style="text-align:center">هيتسجل طلبك وهيتفتح الواتساب برسالة جاهزة. لو دفعت إلكترونياً، ابعت صورة الإيصال في نفس المحادثة.</p>
+
+    <div id="done" class="done hidden"></div>
+  </section>
+</main>
+
+<footer>خرزه © <span id="year"></span></footer>
+
+<script>
+const SUPABASE_URL = 'https://igtgqlhuumfqxtbzgnuq.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_zaFIX1_KmXt7LJnaGZpmjQ_7uBg3EkY';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const BRAND = 'خرزه';
+const CURRENCY = 'ج.م';
+
+let products = [];
+let payments = {};
+let cart = [];
+
+function fmt(n) { return (Math.round((n || 0) * 100) / 100).toFixed(2); }
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function findP(id) { return products.find(p => String(p.id) === String(id)); }
+function cartTotal() { return cart.reduce((s, l) => { const p = findP(l.id); return s + (p ? p.price * l.qty : 0); }, 0); }
+
+async function init() {
+  const [pr, sr] = await Promise.all([
+    sb.from('products').select('*').eq('active', true).order('name'),
+    sb.from('settings').select('value').eq('key', 'payments').maybeSingle()
+  ]);
+  if (pr.error || sr.error) {
+    console.error(pr.error || sr.error);
+    document.getElementById('products').innerHTML = '<p class="muted">مش قادر أحمّل المنتجات دلوقتي، جرّب تعمل refresh بعد شوية.</p>';
+    return;
+  }
+  products = pr.data || [];
+  payments = (sr.data && sr.data.value) || {};
+  initCategories();
+  renderProducts();
+  setupPayments();
+  renderCart();
+  document.getElementById('year').textContent = new Date().getFullYear();
+}
+
+function initCategories() {
+  const cats = [...new Set(products.map(p => p.category).filter(Boolean))];
+  document.getElementById('catFilter').innerHTML =
+    '<option value="">كل الفئات</option>' + cats.map(c => `<option>${esc(c)}</option>`).join('');
+}
+
+// يحوّل رابط الفيديو لعرض مناسب: يوتيوب، أو ملف فيديو مباشر
+function mediaHtml(p) {
+  const url = (p.video_url || '').trim();
+  if (url) {
+    const yt = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{11})/);
+    if (yt) return `<iframe src="https://www.youtube.com/embed/${yt[1]}" allow="accelerometer; autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe>`;
+    if (/\.(mp4|webm|mov)(\?|$)/i.test(url)) return `<video src="${esc(url)}" controls playsinline preload="metadata"></video>`;
+    return `<a href="${esc(url)}" target="_blank" style="color:#fff">شوف الفيديو</a>`;
+  }
+  if (p.image_url) return `<img src="${esc(p.image_url)}" alt="${esc(p.name)}">`;
+  return '<div class="noimg"><img src="logo.jpg" alt="خرزه براند"></div>';
+}
+
+function renderProducts() {
+  const cat = document.getElementById('catFilter').value;
+  if (!products.length) {
+    document.getElementById('products').innerHTML = '<p class="muted">المنتجات هتظهر هنا قريب.</p>';
+    return;
+  }
+  const list = products.filter(p => !cat || p.category === cat);
+  document.getElementById('products').innerHTML = list.map(p => {
+    const inCart = cart.find(l => String(l.id) === String(p.id));
+    const out = (p.qty || 0) <= 0;
+    const maxed = inCart && inCart.qty >= p.qty;
+    return `
+      <div class="prod">
+        <div class="media">${mediaHtml(p)}</div>
+        <div class="pbody">
+          <div class="pname">${esc(p.name)}</div>
+          <div class="pmeta">${esc([p.color, p.size].filter(Boolean).join(' · '))}</div>
+          <div class="pprice">${fmt(p.price)} ${CURRENCY}</div>
+          <button class="order" ${out ? 'disabled' : ''} onclick="orderNow('${esc(p.id)}')">
+            ${out ? 'نفدت الكمية' : 'اطلب الان'}
+          </button>
+          <button class="add" ${out || maxed ? 'disabled' : ''} onclick="addToCart('${esc(p.id)}')">
+            ${maxed ? 'وصلت للحد المتاح' : 'أضف للسلة بس'}
+          </button>
+        </div>
+      </div>`;
+  }).join('') || '<p class="muted">مفيش منتجات في الفئة دي.</p>';
+}
+
+function addToCart(id) {
+  const p = findP(id);
+  if (!p) return;
+  const line = cart.find(l => String(l.id) === String(id));
+  if (line) { if (line.qty < p.qty) line.qty++; }
+  else cart.push({ id: p.id, qty: 1 });
+  renderAll();
+}
+
+// اطلب الان: يضيف المنتج للسلة وينقل العميل لنموذج الطلب
+function orderNow(id) {
+  const p = findP(id);
+  if (!p || (p.qty || 0) <= 0) return;
+  const line = cart.find(l => String(l.id) === String(id));
+  if (!line) cart.push({ id: p.id, qty: 1 });
+  renderAll();
+  document.getElementById('orderForm').scrollIntoView({ behavior: 'smooth' });
+  setTimeout(() => document.getElementById('cName').focus(), 500);
+}
+
+function changeQty(id, d) {
+  const line = cart.find(l => String(l.id) === String(id));
+  const p = findP(id);
+  if (!line || !p) return;
+  const nq = line.qty + d;
+  if (nq <= 0) cart = cart.filter(l => String(l.id) !== String(id));
+  else if (nq <= p.qty) line.qty = nq;
+  renderAll();
+}
+
+function renderCart() {
+  document.getElementById('cartLines').innerHTML = cart.map(l => {
+    const p = findP(l.id);
+    if (!p) return '';
+    return `
+      <div class="line">
+        <div>
+          <div>${esc(p.name)}</div>
+          <div class="muted">${fmt(p.price)} ${CURRENCY}</div>
+        </div>
+        <div class="qty">
+          <button onclick="changeQty('${esc(l.id)}',-1)">−</button>
+          <span style="margin:0 8px">${l.qty}</span>
+          <button onclick="changeQty('${esc(l.id)}',1)">+</button>
+        </div>
+        <div>${fmt(p.price * l.qty)}</div>
+      </div>`;
+  }).join('');
+  document.getElementById('cartEmpty').style.display = cart.length ? 'none' : 'block';
+  document.getElementById('cartTotal').textContent = fmt(cartTotal());
+  document.getElementById('cartCount').textContent = cart.reduce((s, l) => s + l.qty, 0);
+  document.getElementById('sendBtn').disabled = !cart.length;
+}
+
+function setupPayments() {
+  const opts = [];
+  if (payments.instapay) opts.push(['instapay', 'انستاباي']);
+  if (payments.vodafone_enabled && payments.vodafone) opts.push(['vodafone', 'فودافون كاش']);
+  if (payments.cod_enabled) opts.push(['cod', 'الدفع عند الاستلام']);
+  document.getElementById('payOpts').innerHTML = opts.length
+    ? opts.map((o, i) => `<label><input type="radio" name="pm" value="${o[0]}" ${i === 0 ? 'checked' : ''} onchange="showPayInfo()"> ${o[1]}</label>`).join('')
+    : '<span class="muted">طرق الدفع مش متاحة دلوقتي</span>';
+  showPayInfo();
+}
+
+function selectedPay() {
+  const el = document.querySelector('input[name="pm"]:checked');
+  return el ? el.value : null;
+}
+
+function showPayInfo() {
+  const m = selectedPay();
+  const box = document.getElementById('payInfo');
+  if (!m) { box.classList.add('hidden'); return; }
+  box.classList.remove('hidden');
+  if (m === 'instapay') box.innerHTML = `حوّل المبلغ على انستاباي: <b>${esc(payments.instapay)}</b>`;
+  else if (m === 'vodafone') box.innerHTML = `حوّل المبلغ على فودافون كاش: <b>${esc(payments.vodafone)}</b>`;
+  else box.innerHTML = 'هتدفع كاش لما الطلب يوصلك.';
+}
+
+function renderAll() {
+  renderProducts();
+  renderCart();
+}
+
+async function sendOrder() {
+  if (!cart.length) { alert('السلة فاضية'); return; }
+  const name = document.getElementById('cName').value.trim();
+  const phone = document.getElementById('cPhone').value.trim();
+  const addr = document.getElementById('cAddr').value.trim();
+  const note = document.getElementById('cNote').value.trim();
+  if (!name || !phone || !addr) { alert('اكتب الاسم والتليفون والعنوان'); return; }
+  if (!/^01[0-9]{9}$/.test(phone)) { alert('رقم التليفون لازم يكون 11 رقم ويبدأ بـ 01'); return; }
+  const m = selectedPay();
+  if (!m) { alert('اختار طريقة الدفع'); return; }
+  if (!payments.whatsapp) { alert('الطلبات مش متاحة دلوقتي، جرّب بعد شوية'); return; }
+
+  for (const l of cart) {
+    const p = findP(l.id);
+    if (!p || l.qty > p.qty) { alert(`الكمية المتاحة من ${p ? p.name : 'المنتج'} هي ${p ? p.qty : 0} بس`); return; }
+  }
+
+  const btn = document.getElementById('sendBtn');
+  btn.disabled = true;
+  btn.textContent = 'جاري تسجيل الطلب...';
+
+  const code = 'KH' + Date.now().toString(36).toUpperCase().slice(-5);
+  const payLabel = m === 'instapay' ? 'انستاباي' : m === 'vodafone' ? 'فودافون كاش' : 'الدفع عند الاستلام';
+  const total = cartTotal();
+  const items = cart.map(l => {
+    const p = findP(l.id);
+    return { id: p.id, name: p.name, color: p.color || '', qty: l.qty, price: p.price, lineTotal: p.price * l.qty };
+  });
+
+  const { error } = await sb.from('web_orders').insert({
+    id: code, status: 'pending', name, phone, address: addr, note,
+    payment_method: m, items, total
+  });
+
+  if (error) {
+    console.error(error);
+    alert('حصلت مشكلة وماتسجلش الطلب، جرّب تاني بعد شوية');
+    btn.disabled = false;
+    btn.textContent = 'ابعت الطلب';
+    return;
+  }
+
+  const lines = items.map(i => `• ${i.name}${i.color ? ' - ' + i.color : ''} × ${i.qty} = ${fmt(i.lineTotal)} ${CURRENCY}`).join('\n');
+  const text =
+`طلب جديد من ${BRAND}
+رقم الطلب: ${code}
+
+${lines}
+
+الإجمالي: ${fmt(total)} ${CURRENCY}
+طريقة الدفع: ${payLabel}
+
+الاسم: ${name}
+التليفون: ${phone}
+العنوان: ${addr}${note ? '\nملاحظات: ' + note : ''}`;
+
+  window.open(`https://wa.me/${payments.whatsapp}?text=${encodeURIComponent(text)}`, '_blank');
+
+  const done = document.getElementById('done');
+  done.classList.remove('hidden');
+  done.innerHTML = `تم تسجيل طلبك برقم <b>${code}</b>. ابعت الرسالة في الواتساب` +
+    (m !== 'cod' ? '، وبعدها ابعت صورة إيصال التحويل في نفس المحادثة.' : '.');
+
+  cart = [];
+  renderAll();
+  btn.textContent = 'ابعت الطلب';
+}
+
+init();
+</script>
+</body>
+</html>
