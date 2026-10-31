@@ -79,6 +79,9 @@
     <div class="pay" id="payOpts"></div>
     <div id="payInfo" class="info hidden"></div>
 
+    <div style="margin-top:14px"><label style="display:block;font-size:14px">كود الخصم (اختياري)</label>
+      <div style="display:flex;gap:8px;margin-top:4px"><input id="cCoupon" placeholder="اكتب الكود"><button type="button" class="add" onclick="applyCoupon()">تطبيق</button></div>
+      <div id="couponMsg" class="muted" style="margin-top:6px"></div></div>
     <button class="send" id="sendBtn" onclick="sendOrder()" disabled>ابعت الطلب</button>
     <p class="muted" style="text-align:center">هيتسجل طلبك، وهيتفتح الواتساب برسالة جاهزة. لو دفعت إلكترونياً، ابعت صورة الإيصال في نفس المحادثة.</p>
     <div id="done" class="done hidden"></div>
@@ -93,12 +96,29 @@ const SUPABASE_KEY = 'sb_publishable_zaFIX1_KmXt7LJnaGZpmjQ_7uBg3EkY';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const BRAND = 'خرزه';
 const CURRENCY = 'ج.م';
-let products = [], payments = {}, cart = [];
+let products = [], payments = {}, cart = [], coupon = null;
 
 function fmt(n) { return (Math.round((n || 0) * 100) / 100).toFixed(2); }
 function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function findP(id) { return products.find(p => String(p.id) === String(id)); }
 function cartTotal() { return cart.reduce((s, l) => { const p = findP(l.id); return s + (p ? p.price * l.qty : 0); }, 0); }
+function discountAmount(sub) {
+  if (!coupon) return 0;
+  const d = coupon.type === 'percent' ? sub * Number(coupon.value) / 100 : Number(coupon.value);
+  return Math.min(sub, Math.max(0, d));
+}
+function finalTotal() { const t = cartTotal(); return t - discountAmount(t); }
+
+async function applyCoupon() {
+  const code = document.getElementById('cCoupon').value.trim().toUpperCase();
+  const info = document.getElementById('couponMsg');
+  if (!code) { coupon = null; info.textContent = ''; renderAll(); return; }
+  const { data, error } = await sb.from('coupons').select('*').eq('code', code).eq('active', true).maybeSingle();
+  if (error || !data) { coupon = null; info.textContent = 'الكود ده مش صالح'; renderAll(); return; }
+  coupon = data;
+  info.textContent = `اتطبق الكوبون ${data.code}: خصم ${data.type === 'percent' ? data.value + '%' : fmt(data.value) + ' ' + CURRENCY}`;
+  renderAll();
+}
 
 async function init() {
   const [pr, sr] = await Promise.all([
@@ -185,7 +205,7 @@ function renderCart() {
       <div>${fmt(p.price * l.qty)}</div></div>`;
   }).join('');
   document.getElementById('cartEmpty').style.display = cart.length ? 'none' : 'block';
-  document.getElementById('cartTotal').textContent = fmt(cartTotal());
+  document.getElementById('cartTotal').textContent = fmt(finalTotal());
   document.getElementById('cartCount').textContent = cart.reduce((s, l) => s + l.qty, 0);
   document.getElementById('sendBtn').disabled = !cart.length;
 }
@@ -235,9 +255,9 @@ async function sendOrder() {
   btn.disabled = true; btn.textContent = 'جاري تسجيل الطلب...';
   const code = 'KH' + Date.now().toString(36).toUpperCase().slice(-5);
   const payLabel = m === 'instapay' ? 'انستاباي' : m === 'vodafone' ? 'فودافون كاش' : m === 'visa' ? 'فيزا' : 'الدفع عند الاستلام';
-  const total = cartTotal();
+  const total = finalTotal();
   const items = cart.map(l => { const p = findP(l.id); return { id: p.id, name: p.name, color: p.color || '', qty: l.qty, price: p.price, lineTotal: p.price * l.qty }; });
-  const { error } = await sb.from('web_orders').insert({ id: code, status: 'pending', name, phone, address: addr, note, payment_method: m, items, total });
+  const { error } = await sb.from('web_orders').insert({ id: code, status: 'pending', name, phone, address: addr, note: note + (coupon ? ' | كوبون ' + coupon.code : ''), payment_method: m, items, total });
   if (error) {
     console.error(error);
     alert('حصلت مشكلة وماتسجلش الطلب، جرّب تاني بعد شوية');

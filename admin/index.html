@@ -144,6 +144,7 @@ const TABS = [
   { id: 'payments',  label: 'أرقام الدفع',         roles: ['manager'] },
     { id: 'shifts', label: 'الورديات', roles: ['manager'] },
   { id: 'coupons',   label: 'الكوبونات',           roles: ['manager'] },
+    { id: 'categories', label: 'الفئات', roles: ['manager'] },
 ];
 
 let profile = null, branches = [], selectedBranch = 'all', currentTab = null;
@@ -234,7 +235,7 @@ function openTab(id) {
   say('globalMsg', '');
   const renderers = {
     pos: renderPos, products: renderProducts, customers: renderCustomers,
-    suppliers: renderSuppliers, reports: renderReports, shifts: renderShifts, payments: renderPayments
+    suppliers: renderSuppliers, reports: renderReports, shifts: renderShifts, payments: renderPayments, coupons: renderCoupons, categories: renderCategories
   };
   if (renderers[id]) renderers[id]();
   else $('tabContent').innerHTML = `<div class="card"><h2 style="margin-top:0">${esc(tab.label)}</h2><p class="muted">هيتبني في الخطوة الجاية.</p></div>`;
@@ -247,7 +248,7 @@ function renderProducts() {
     <h2 id="pTitle" style="margin-top:0">إضافة منتج</h2>
     <div class="grid">
       <div class="field">الاسم *<input id="fName"></div>
-      <div class="field">الفئة<select id="fCat">${CATEGORIES.map(c => `<option>${esc(c)}</option>`).join('')}</select></div>
+      <div class="field">الفئة<select id="fCat"></select></div>
       <div class="field">الموديل / اللون<input id="fColor"></div>
       <div class="field">الباركود (اختياري، لو فاضي بيتولد)<input id="fBarcode"></div>
       <div class="field">سعر البيع *<input id="fPrice" type="number" min="0" step="0.01"></div>
@@ -268,6 +269,7 @@ function renderProducts() {
     <div class="msg" id="pListMsg"></div>
   </div>`;
   loadProducts();
+  loadCategoryOptions();
 }
 
 async function loadProducts() {
@@ -1323,6 +1325,159 @@ async function applyVisaSetting() {
   if (!on && $('posVisa')) { $('posVisa').value = 0; $('posRVisa').value = ''; posTotals(); }
 }
 
+
+/* ================= الفئات ================= */
+let categoriesData = [];
+
+function renderCategories() {
+  $('tabContent').innerHTML = `
+  <div class="card">
+    <h2 style="margin-top:0">فئات المنتجات</h2>
+    <div class="row left">
+      <input id="catName" class="inp" placeholder="اسم الفئة الجديدة" style="min-width:260px">
+      <button class="btn4" onclick="addCategory()">إضافة فئة</button>
+    </div>
+    <div class="msg" id="catMsg"></div>
+  </div>
+  <div class="card">
+    <div class="tw"><table><thead><tr><th>الفئة</th><th>عدد المنتجات</th><th>الحالة</th><th></th></tr></thead><tbody id="catRows"></tbody></table></div>
+  </div>`;
+  loadCategories();
+}
+
+async function loadCategories() {
+  const { data, error } = await sb.from('categories').select('*').order('name');
+  if (error) { say('catMsg', 'مش قادر أحمّل الفئات: ' + error.message); return; }
+  categoriesData = data || [];
+  const rows = [];
+  for (const c of categoriesData) {
+    const { count } = await sb.from('products').select('id', { count: 'exact', head: true }).eq('category', c.name);
+    rows.push(`<tr>
+      <td>${esc(c.name)}</td>
+      <td>${count || 0}</td>
+      <td><span class="pill ${c.active ? 'ok-p' : 'bad-p'}">${c.active ? 'ظاهرة' : 'مخفية'}</span></td>
+      <td>
+        <button class="btn2" onclick="renameCategory(${c.id})">تعديل الاسم</button>
+        <button class="btn2" onclick="toggleCategory(${c.id})">${c.active ? 'إخفاء' : 'إظهار'}</button>
+        <button class="btn3" onclick="deleteCategory(${c.id})">حذف</button>
+      </td></tr>`);
+  }
+  $('catRows').innerHTML = rows.join('') || '<tr><td colspan="4" class="muted">مفيش فئات</td></tr>';
+}
+
+async function addCategory() {
+  const name = $('catName').value.trim();
+  if (!name) { say('catMsg', 'اكتب اسم الفئة'); return; }
+  const { error } = await sb.from('categories').insert({ name });
+  if (error) { say('catMsg', error.code === '23505' ? 'الفئة دي موجودة قبل كده' : 'حصلت مشكلة: ' + error.message); return; }
+  $('catName').value = '';
+  say('catMsg', 'تمت إضافة الفئة', true);
+  loadCategories();
+}
+
+async function renameCategory(id) {
+  const c = categoriesData.find(x => x.id === id);
+  if (!c) return;
+  const name = (prompt('الاسم الجديد للفئة:', c.name) || '').trim();
+  if (!name || name === c.name) return;
+  await sb.from('products').update({ category: name }).eq('category', c.name);
+  const { error } = await sb.from('categories').update({ name }).eq('id', id);
+  if (error) { say('catMsg', error.code === '23505' ? 'الاسم ده موجود قبل كده' : 'حصلت مشكلة: ' + error.message); return; }
+  loadCategories();
+}
+
+async function toggleCategory(id) {
+  const c = categoriesData.find(x => x.id === id);
+  if (!c) return;
+  const { error } = await sb.from('categories').update({ active: !c.active }).eq('id', id);
+  if (error) say('catMsg', 'حصلت مشكلة: ' + error.message);
+  loadCategories();
+}
+
+async function deleteCategory(id) {
+  const c = categoriesData.find(x => x.id === id);
+  if (!c) return;
+  const { count } = await sb.from('products').select('id', { count: 'exact', head: true }).eq('category', c.name);
+  if (count > 0) { say('catMsg', 'فيه منتجات في الفئة دي، انقلها لفئة تانية الأول'); return; }
+  if (!confirm('تحذف الفئة "' + c.name + '"؟')) return;
+  const { error } = await sb.from('categories').delete().eq('id', id);
+  if (error) say('catMsg', 'حصلت مشكلة: ' + error.message);
+  loadCategories();
+}
+
+async function loadCategoryOptions() {
+  const sel = $('fCat');
+  if (!sel) return;
+  const cur = sel.value;
+  const { data } = await sb.from('categories').select('name').eq('active', true).order('name');
+  sel.innerHTML = (data || []).map(c => `<option>${esc(c.name)}</option>`).join('') || '<option value="">ضيف فئات الأول من تبويب الفئات</option>';
+  if (cur) sel.value = cur;
+}
+
+/* ================= الكوبونات ================= */
+let couponsList = [];
+
+function renderCoupons() {
+  $('tabContent').innerHTML = `
+  <div class="card">
+    <h2 style="margin-top:0">الكوبونات</h2>
+    <div class="row left">
+      <input id="cpCode" class="inp" placeholder="الكود مثلاً SUMMER10" style="min-width:200px">
+      <select id="cpType" class="inp"><option value="percent">نسبة %</option><option value="fixed">مبلغ ج.م</option></select>
+      <input id="cpVal" class="inp" type="number" min="0" step="0.01" value="10" style="width:110px">
+      <button class="btn4" onclick="addCoupon()">إضافة الكوبون</button>
+    </div>
+    <div class="msg" id="cpMsg"></div>
+  </div>
+  <div class="card">
+    <div class="tw"><table><thead><tr><th>الكود</th><th>الخصم</th><th>الحالة</th><th></th></tr></thead><tbody id="cpRows"></tbody></table></div>
+  </div>`;
+  loadCoupons();
+}
+
+async function loadCoupons() {
+  const { data, error } = await sb.from('coupons').select('*').order('code');
+  if (error) { say('cpMsg', 'مش قادر أحمّل الكوبونات: ' + error.message); return; }
+  couponsList = data || [];
+  $('cpRows').innerHTML = couponsList.map((c, i) => `<tr>
+    <td>${esc(c.code)}</td>
+    <td>${c.type === 'percent' ? c.value + '%' : fmt(c.value) + ' ' + CURRENCY}</td>
+    <td><span class="pill ${c.active ? 'ok-p' : 'bad-p'}">${c.active ? 'فعّال' : 'متوقف'}</span></td>
+    <td>
+      <button class="btn2" onclick="toggleCoupon(${i})">${c.active ? 'إيقاف' : 'تفعيل'}</button>
+      <button class="btn3" onclick="deleteCoupon(${i})">حذف</button>
+    </td></tr>`).join('') || '<tr><td colspan="4" class="muted">مفيش كوبونات</td></tr>';
+}
+
+async function addCoupon() {
+  const code = $('cpCode').value.trim().toUpperCase();
+  const type = $('cpType').value;
+  const value = parseFloat($('cpVal').value);
+  if (!code) { say('cpMsg', 'اكتب الكود'); return; }
+  if (!(value > 0)) { say('cpMsg', 'القيمة لازم تكون أكبر من صفر'); return; }
+  if (type === 'percent' && value > 100) { say('cpMsg', 'النسبة مينفعش تعدي 100%'); return; }
+  const { error } = await sb.from('coupons').insert({ code, type, value, active: true });
+  if (error) { say('cpMsg', error.code === '23505' ? 'الكود ده موجود قبل كده' : 'حصلت مشكلة: ' + error.message); return; }
+  $('cpCode').value = '';
+  say('cpMsg', 'تمت إضافة الكوبون', true);
+  loadCoupons();
+}
+
+async function toggleCoupon(i) {
+  const c = couponsList[i];
+  if (!c) return;
+  const { error } = await sb.from('coupons').update({ active: !c.active }).eq('code', c.code);
+  if (error) say('cpMsg', 'حصلت مشكلة: ' + error.message);
+  loadCoupons();
+}
+
+async function deleteCoupon(i) {
+  const c = couponsList[i];
+  if (!c || !confirm('تحذف الكوبون ' + c.code + '؟')) return;
+  const { error } = await sb.from('coupons').delete().eq('code', c.code);
+  if (error) say('cpMsg', 'حصلت مشكلة: ' + error.message);
+  loadCoupons();
+}
 
 /* ================= بدء التشغيل ================= */
 startApp();
