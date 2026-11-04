@@ -143,6 +143,7 @@ const TABS = [
   { id: 'reports',   label: 'الداش بورد',          roles: ['manager'] },
   { id: 'payments',  label: 'أرقام الدفع',         roles: ['manager'] },
     { id: 'shifts', label: 'الورديات', roles: ['manager'] },
+    { id: 'orders', label: 'طلبات المتجر', roles: ['manager'] },
   { id: 'coupons',   label: 'الكوبونات',           roles: ['manager'] },
     { id: 'categories', label: 'الفئات', roles: ['manager'] },
 ];
@@ -235,7 +236,7 @@ function openTab(id) {
   say('globalMsg', '');
   const renderers = {
     pos: renderPos, products: renderProducts, customers: renderCustomers,
-    suppliers: renderSuppliers, reports: renderReports, shifts: renderShifts, payments: renderPayments, coupons: renderCoupons, categories: renderCategories
+    suppliers: renderSuppliers, reports: renderReports, shifts: renderShifts, orders: renderOrders, payments: renderPayments, coupons: renderCoupons, categories: renderCategories
   };
   if (renderers[id]) renderers[id]();
   else $('tabContent').innerHTML = `<div class="card"><h2 style="margin-top:0">${esc(tab.label)}</h2><p class="muted">هيتبني في الخطوة الجاية.</p></div>`;
@@ -257,6 +258,12 @@ function renderProducts() {
       <div class="field">حد التنبيه<input id="fMin" type="number" min="0" step="1" value="2"></div>
       <div class="field">رابط الصورة<input id="fImg"></div>
       <div class="field">رابط الفيديو (mp4)<input id="fVideo"></div>
+    </div>
+    <div class="field"><label>نوع المنتج</label>
+      <select id="fKind" onchange="toggleKind()"><option value="normal">عادي</option><option value="case">جراب موبايل</option></select></div>
+    <div id="caseBox" class="grid" style="display:none">
+      <div class="field">اسم الموبايل<input id="fPhone" placeholder="مثلاً iPhone 15 Pro"></div>
+      <div class="field">نوع الجراب<select id="fCaseType"><option value="سيليكون">سيليكون</option><option value="شفاف">شفاف</option></select></div>
     </div>
     <label><input type="checkbox" id="fActive" checked> ظاهر</label>
     <div style="margin-top:8px"><button class="btn" onclick="saveProduct()">حفظ المنتج</button><button class="btn2" onclick="resetProductForm()">مسح</button></div>
@@ -313,7 +320,10 @@ function readProductForm() {
     min_qty: parseInt($('fMin').value) || 0,
     image_url: $('fImg').value.trim(),
     video_url: $('fVideo').value.trim(),
-    active: $('fActive').checked
+    active: $('fActive').checked,
+    product_kind: $('fKind').value,
+    phone_model: $('fPhone').value.trim(),
+    case_type: $('fCaseType').value.trim()
   };
 }
 
@@ -356,6 +366,10 @@ function editProduct(id) {
   $('fImg').value = p.image_url || '';
   $('fVideo').value = p.video_url || '';
   $('fActive').checked = !!p.active;
+  $('fKind').value = p.product_kind || 'normal';
+  $('fPhone').value = p.phone_model || '';
+  $('fCaseType').value = p.case_type || 'سيليكون';
+  toggleKind();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -365,6 +379,9 @@ function resetProductForm(keep) {
   ['fName','fColor','fBarcode','fPrice','fImg','fVideo'].forEach(id => $(id).value = '');
   $('fCost').value = 0; $('fQty').value = 0; $('fMin').value = 2;
   $('fActive').checked = true;
+  $('fKind').value = 'normal';
+  $('fPhone').value = ''; $('fCaseType').value = 'سيليكون';
+  toggleKind();
   if (!keep) say('pMsg', '');
 }
 
@@ -1477,6 +1494,103 @@ async function deleteCoupon(i) {
   const { error } = await sb.from('coupons').delete().eq('code', c.code);
   if (error) say('cpMsg', 'حصلت مشكلة: ' + error.message);
   loadCoupons();
+}
+
+/* ================= نوع المنتج ================= */
+function toggleKind() {
+  if (!$('fKind')) return;
+  $('caseBox').style.display = $('fKind').value === 'case' ? 'grid' : 'none';
+}
+
+/* ================= طلبات المتجر ================= */
+const ORDER_STATUS = { pending: 'بانتظار التأكيد', confirmed: 'مؤكد', shipped: 'اتشحن', cancelled: 'ملغي' };
+const ORDER_PAY = { instapay: 'انستاباي', vodafone: 'فودافون كاش', visa: 'فيزا', cod: 'الدفع عند الاستلام' };
+let ordersData = [];
+
+function renderOrders() {
+  $('tabContent').innerHTML = `
+  <div class="card">
+    <div class="row">
+      <h2 style="margin:0">طلبات المتجر (<span id="ordCount">0</span>)</h2>
+      <select id="ordFilter" class="inp" onchange="renderOrderRows()">
+        <option value="">كل الحالات</option>
+        <option value="pending">بانتظار التأكيد</option>
+        <option value="confirmed">مؤكد</option>
+        <option value="shipped">اتشحن</option>
+        <option value="cancelled">ملغي</option>
+      </select>
+    </div>
+    <div class="tw" style="margin-top:10px"><table><thead><tr><th>الرقم</th><th>التاريخ</th><th>العميل</th><th>التليفون</th><th>الإجمالي</th><th>الدفع</th><th>الحالة</th><th></th></tr></thead><tbody id="ordRows"></tbody></table></div>
+    <div class="msg" id="ordMsg"></div>
+  </div>
+  <div class="card" id="ordDetail" style="display:none"></div>`;
+  loadOrders();
+}
+
+async function loadOrders() {
+  const { data, error } = await sb.from('web_orders').select('*').order('created_at', { ascending: false }).limit(300);
+  if (error) { say('ordMsg', 'مش قادر أحمّل الطلبات: ' + error.message); return; }
+  ordersData = data || [];
+  renderOrderRows();
+}
+
+function renderOrderRows() {
+  const f = $('ordFilter') ? $('ordFilter').value : '';
+  const list = ordersData.filter(o => !f || o.status === f);
+  if ($('ordCount')) $('ordCount').textContent = ordersData.length;
+  $('ordRows').innerHTML = list.map(o => `<tr>
+    <td>${esc(o.id)}</td>
+    <td>${new Date(o.created_at).toLocaleString('ar-EG')}</td>
+    <td>${esc(o.name)}</td>
+    <td>${esc(o.phone)}</td>
+    <td>${fmt(o.total)}</td>
+    <td>${esc(ORDER_PAY[o.payment_method] || o.payment_method)}</td>
+    <td><span class="pill">${ORDER_STATUS[o.status] || esc(o.status)}</span></td>
+    <td><button class="btn2" onclick="openOrder('${esc(o.id)}')">تفاصيل</button></td>
+  </tr>`).join('') || '<tr><td colspan="8" class="muted">مفيش طلبات</td></tr>';
+}
+
+function openOrder(id) {
+  const o = ordersData.find(x => x.id === id);
+  if (!o) return;
+  const items = (o.items || []).map(i =>
+    `<tr><td>${esc(i.name)} ${esc(i.color || '')}${i.phone_model ? '<div class="muted">موبايل: ' + esc(i.phone_model) + (i.case_type ? ' · ' + esc(i.case_type) : '') + '</div>' : ''}</td><td>${i.qty}</td><td>${fmt(i.price)}</td><td>${fmt(i.lineTotal)}</td></tr>`).join('');
+  const acts = [];
+  if (o.status === 'pending') acts.push(`<button class="btn4" onclick="setOrderStatus('${esc(o.id)}','confirmed')">تأكيد الدفع وخصم المخزون</button>`);
+  if (o.status === 'confirmed') acts.push(`<button class="btn2" onclick="setOrderStatus('${esc(o.id)}','shipped')">تم الشحن</button>`);
+  if (o.status !== 'cancelled' && o.status !== 'shipped') acts.push(`<button class="btn3" onclick="setOrderStatus('${esc(o.id)}','cancelled')">إلغاء الطلب</button>`);
+  const box = $('ordDetail');
+  box.style.display = 'block';
+  box.innerHTML = `
+    <div class="row"><h2 style="margin:0">طلب ${esc(o.id)}</h2><button class="btn2" onclick="$('ordDetail').style.display='none'">إغلاق</button></div>
+    <p>العميل: <b>${esc(o.name)}</b> — ${esc(o.phone)}</p>
+    <p>العنوان: ${esc(o.address)}</p>
+    ${o.note ? `<p>ملاحظات: ${esc(o.note)}</p>` : ''}
+    <p>طريقة الدفع: ${esc(ORDER_PAY[o.payment_method] || o.payment_method)}</p>
+    <div class="tw"><table><thead><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead><tbody>${items}</tbody></table></div>
+    <p><b>الإجمالي: ${fmt(o.total)} ${CURRENCY}</b></p>
+    <div>${acts.join(' ')}</div>
+    <div class="msg" id="ordDetailMsg"></div>`;
+  box.scrollIntoView({ behavior: 'smooth' });
+}
+
+async function adjustStock(items, delta) {
+  for (const it of items || []) {
+    const { data } = await sb.from('products').select('qty').eq('id', it.id).maybeSingle();
+    if (!data) continue;
+    await sb.from('products').update({ qty: Math.max(0, (data.qty || 0) + delta * it.qty) }).eq('id', it.id);
+  }
+}
+
+async function setOrderStatus(id, next) {
+  const o = ordersData.find(x => x.id === id);
+  if (!o) return;
+  if (o.status === 'pending' && next === 'confirmed') await adjustStock(o.items, -1);
+  if (o.status === 'confirmed' && next === 'cancelled') await adjustStock(o.items, +1);
+  const { error } = await sb.from('web_orders').update({ status: next }).eq('id', id);
+  if (error) { say('ordDetailMsg', 'حصلت مشكلة: ' + error.message); return; }
+  await loadOrders();
+  openOrder(id);
 }
 
 /* ================= بدء التشغيل ================= */

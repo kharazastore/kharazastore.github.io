@@ -164,7 +164,7 @@ function renderProducts() {
       <div class="media">${mediaHtml(p)}</div>
       <div class="pbody">
         <div class="pname">${esc(p.name)}</div>
-        <div class="pmeta">${esc([p.color, p.size].filter(Boolean).join(' · '))}</div>
+        <div class="pmeta">${esc([p.color, p.size, p.product_kind === 'case' ? 'موبايل: ' + (p.phone_model || '') : '', p.product_kind === 'case' ? (p.case_type || '') : ''].filter(Boolean).join(' · '))}</div>
         <div class="pprice">${fmt(p.price)} ${CURRENCY}</div>
         <button class="order" ${out ? 'disabled' : ''} onclick="orderNow('${esc(p.id)}')">${out ? 'نفدت الكمية' : 'اطلب الان'}</button>
         <button class="add" ${out || maxed ? 'disabled' : ''} onclick="addToCart('${esc(p.id)}')">${maxed ? 'وصلت للحد المتاح' : 'أضف للسلة بس'}</button>
@@ -256,7 +256,7 @@ async function sendOrder() {
   const code = 'KH' + Date.now().toString(36).toUpperCase().slice(-5);
   const payLabel = m === 'instapay' ? 'انستاباي' : m === 'vodafone' ? 'فودافون كاش' : m === 'visa' ? 'فيزا' : 'الدفع عند الاستلام';
   const total = finalTotal();
-  const items = cart.map(l => { const p = findP(l.id); return { id: p.id, name: p.name, color: p.color || '', qty: l.qty, price: p.price, lineTotal: p.price * l.qty }; });
+  const items = cart.map(l => { const p = findP(l.id); return { id: p.id, name: p.name, color: p.color || '', phone_model: p.phone_model || '', case_type: p.case_type || '', qty: l.qty, price: p.price, lineTotal: p.price * l.qty }; });
   const { error } = await sb.from('web_orders').insert({ id: code, status: 'pending', name, phone, address: addr, note: note + (coupon ? ' | كوبون ' + coupon.code : ''), payment_method: m, items, total });
   if (error) {
     console.error(error);
