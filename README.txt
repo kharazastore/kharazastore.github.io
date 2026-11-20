@@ -7,3 +7,12 @@
 الخطوات:
 1) في Supabase SQL Editor شغّل بالترتيب: 001_base.sql ثم 002_branches_ops.sql ثم 003_single_store.sql ثم 004_categories.sql ثم 005_product_types.sql.
 2) ارفع index.html و logo.jpg و store و admin و sql على الجذر.
+
+
+إضافة صورة المنتج من الجهاز أو الموبايل:
+- من لوحة Supabase افتح Storage ثم New bucket.
+- اسم الـ bucket: product-images
+- فعّل Public bucket.
+- احفظ، ثم ارفع ملفات هذا الإصدار إلى Cloudflare Pages.
+- داخل لوحة الإدارة > المنتجات، اختر الصورة من الجهاز؛ ستظهر معاينة ثم احفظ المنتج.
+- إذا ظهر خطأ صلاحيات عند الرفع، يلزم ضبط سياسة Storage للسماح للمستخدمين المصرح لهم بالرفع.

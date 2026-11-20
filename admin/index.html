@@ -131,6 +131,29 @@
 const SUPABASE_URL = 'https://igtgqlhuumfqxtbzgnuq.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_zaFIX1_KmXt7LJnaGZpmjQ_7uBg3EkY';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let selectedProductImage = null;
+function previewProductImage(event) {
+  selectedProductImage = event.target.files?.[0] || null;
+  const box = $('fImgPreview');
+  if (!selectedProductImage) { box.innerHTML = ''; return; }
+  if (!selectedProductImage.type.startsWith('image/')) {
+    selectedProductImage = null; event.target.value = '';
+    box.innerHTML = '<span class="muted">اختار ملف صورة صالح.</span>'; return;
+  }
+  const localUrl = URL.createObjectURL(selectedProductImage);
+  box.innerHTML = `<img src="${localUrl}" alt="معاينة الصورة" style="max-width:150px;max-height:150px;object-fit:contain;border-radius:12px;border:1px solid #ddd">`;
+}
+async function uploadProductImageIfNeeded() {
+  if (!selectedProductImage) return $('fImg').value.trim();
+  const ext = (selectedProductImage.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+  const path = `products/${Date.now()}-${Math.random().toString(36).slice(2,8)}.${ext}`;
+  const { error: uploadError } = await sb.storage.from('product-images').upload(path, selectedProductImage, {
+    cacheControl: '3600', upsert: false, contentType: selectedProductImage.type
+  });
+  if (uploadError) throw uploadError;
+  return sb.storage.from('product-images').getPublicUrl(path).data.publicUrl;
+}
+
 
 const ROLE_LABEL = { manager: 'مدير', technician: 'صيانة', cashier: 'كاشير' };
 const CURRENCY = 'ج.م';
@@ -256,7 +279,13 @@ function renderProducts() {
       <div class="field">التكلفة<input id="fCost" type="number" min="0" step="0.01" value="0"></div>
       <div class="field">الكمية<input id="fQty" type="number" min="0" step="1" value="0"></div>
       <div class="field">حد التنبيه<input id="fMin" type="number" min="0" step="1" value="2"></div>
-      <div class="field">رابط الصورة<input id="fImg"></div>
+      <div class="field">
+        صورة المنتج
+        <input id="fImgFile" type="file" accept="image/*" onchange="previewProductImage(event)">
+        <div id="fImgPreview" style="margin-top:8px"></div>
+        <div class="muted" style="font-size:12px">اختار صورة من الجهاز أو الموبايل. تُرفع تلقائيًا عند حفظ المنتج.</div>
+        <input id="fImg" type="hidden">
+      </div>
       <div class="field">رابط الفيديو (mp4)<input id="fVideo"></div>
     </div>
     <div class="field"><label>نوع المنتج</label>
@@ -334,6 +363,12 @@ async function saveProduct() {
   if (!(d.price >= 0)) { say('pMsg', 'اكتب سعر صحيح'); return; }
   if (d.qty < 0) { say('pMsg', 'الكمية مينفعش تكون سالبة'); return; }
   let error;
+  try {
+    if (selectedProductImage) d.image_url = await uploadProductImageIfNeeded();
+  } catch (uploadError) {
+    say('pMsg', 'فشل رفع الصورة: ' + uploadError.message + ' — تأكد من إنشاء Storage bucket باسم product-images وجعله Public.');
+    return;
+  }
   if (editingProductId) {
     const old = products.find(x => x.id === editingProductId);
     d.barcode = typedBarcode || old.barcode;
@@ -364,6 +399,8 @@ function editProduct(id) {
   $('fQty').value = p.qty ?? 0;
   $('fMin').value = p.min_qty ?? 0;
   $('fImg').value = p.image_url || '';
+  $('fImgFile').value = ''; selectedProductImage = null;
+  $('fImgPreview').innerHTML = p.image_url ? `<img src="${esc(p.image_url)}" alt="صورة المنتج" style="max-width:150px;max-height:150px;object-fit:contain;border-radius:12px;border:1px solid #ddd">` : '';
   $('fVideo').value = p.video_url || '';
   $('fActive').checked = !!p.active;
   $('fKind').value = p.product_kind || 'normal';
@@ -377,6 +414,9 @@ function resetProductForm(keep) {
   editingProductId = null;
   $('pTitle').textContent = 'إضافة منتج';
   ['fName','fColor','fBarcode','fPrice','fImg','fVideo'].forEach(id => $(id).value = '');
+  if ($('fImgFile')) $('fImgFile').value = '';
+  selectedProductImage = null;
+  if ($('fImgPreview')) $('fImgPreview').innerHTML = '';
   $('fCost').value = 0; $('fQty').value = 0; $('fMin').value = 2;
   $('fActive').checked = true;
   $('fKind').value = 'normal';
