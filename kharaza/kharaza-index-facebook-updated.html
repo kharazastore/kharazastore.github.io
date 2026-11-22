@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#28121f">
+  <meta name="description" content="خرزة براند — اختاري حاجتك من قلبنا ليكي.">
+  <title>خرزة براند | Kharaza Brand</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --page: #28121f;
+      --panel: #3a1d2d;
+      --panel-2: #432236;
+      --panel-soft: #51283e;
+      --pink: #f26ba9;
+      --pink-light: #ff8cbd;
+      --pink-dim: #a95179;
+      --text: #ffe7f1;
+      --muted: #d8a3bb;
+      --line: rgba(242, 107, 169, .56);
+      --shadow: 0 10px 28px rgba(12, 3, 9, .16);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-width: 300px;
+      background: var(--page);
+      color: var(--text);
+      font-family: "Cairo", Tahoma, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    .page {
+      width: min(100% - 34px, 490px);
+      margin: 0 auto;
+      padding: 24px 0 28px;
+    }
+
+    .topline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      direction: ltr;
+      padding: 0 5px 13px;
+      color: var(--pink-light);
+      font-family: "Playfair Display", serif;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 1.6px;
+      text-transform: uppercase;
+    }
+    .topline .brand-mark { display: flex; gap: 7px; align-items: center; }
+    .topline .spark { font-size: 13px; }
+    .topline .love { letter-spacing: 1px; }
+
+    .panel {
+      position: relative;
+      overflow: hidden;
+      border: 1.5px solid var(--pink-dim);
+      border-radius: 27px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      min-height: 390px;
+      padding: 23px 21px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      isolation: isolate;
+    }
+    .hero::before,
+    .hero::after {
+      content: "";
+      position: absolute;
+      z-index: -1;
+      width: 125px;
+      height: 125px;
+      border-radius: 50%;
+      background: rgba(160, 66, 111, .22);
+    }
+    .hero::before { top: -47px; left: -45px; }
+    .hero::after { right: -67px; bottom: -54px; }
+
+    .logo-circle {
+      width: 69px;
+      height: 69px;
+      display: grid;
+      place-items: center;
+      border: 1.5px solid var(--pink-dim);
+      border-radius: 50%;
+      color: var(--pink);
+      font-family: "Playfair Display", serif;
+      font-size: 35px;
+      font-weight: 800;
+      margin: 0 auto 12px;
+      background: rgba(44, 17, 32, .42);
+      box-shadow: inset 0 0 16px rgba(242, 107, 169, .06);
+    }
+    .eyebrow {
+      direction: ltr;
+      font-family: "Playfair Display", serif;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 3px;
+      color: var(--text);
+      margin-bottom: 2px;
+    }
+    h1 {
+      margin: 7px 0 11px;
+      color: var(--pink-light);
+      font-size: clamp(36px, 10vw, 50px);
+      line-height: 1.25;
+      font-weight: 900;
+      text-shadow: 0 3px 0 rgba(128, 42, 82, .3);
+    }
+    .intro-box {
+      width: 100%;
+      max-width: 370px;
+      padding: 16px 14px 15px;
+      border: 1.3px solid var(--pink-dim);
+      border-radius: 24px 24px 19px 19px;
+      background: rgba(55, 26, 43, .86);
+      color: #ffe7f1;
+      font-size: 13px;
+      line-height: 1.95;
+      font-weight: 700;
+    }
+    .intro-box .heart { color: var(--pink); }
+    .intro-box .diamond { color: #6ed9ed; }
+    .dots { display: flex; align-items: center; justify-content: center; gap: 9px; margin-top: auto; padding-top: 19px; }
+    .dots span { width: 8px; height: 8px; border-radius: 50%; background: #eac3d4; opacity: .85; }
+    .dots span.active { background: var(--pink-light); transform: scale(1.14); }
+
+    .social-panel {
+      margin-top: 17px;
+      padding: 16px 15px 17px;
+      border: 2px solid var(--pink);
+      border-radius: 25px;
+      background: rgba(57, 27, 44, .92);
+    }
+    .section-kicker {
+      margin: 0 0 13px;
+      text-align: center;
+      color: var(--pink-light);
+      font-size: 15px;
+      line-height: 1.65;
+      font-weight: 900;
+    }
+    .social-list { display: grid; gap: 11px; }
+    .social-link {
+      min-height: 77px;
+      display: grid;
+      grid-template-columns: 53px minmax(0, 1fr) 38px;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 10px;
+      direction: ltr;
+      border: 1.5px solid var(--pink-light);
+      border-radius: 21px;
+      background: var(--panel-2);
+      transition: transform .18s ease, background .18s ease, border-color .18s ease;
+    }
+    .social-link:hover { transform: translateY(-2px); background: #4b263a; border-color: #ffa3ca; }
+    .social-icon {
+      width: 52px;
+      height: 52px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: var(--pink);
+      background: #5a2d47;
+    }
+    .social-icon svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .social-icon .letter { font-family: Arial, sans-serif; font-size: 28px; font-weight: 800; }
+    .social-copy { min-width: 0; text-align: left; direction: ltr; }
+    .social-title { display: block; color: var(--text); font-family: "Playfair Display", "Cairo", serif; font-size: 17px; line-height: 1.25; font-weight: 800; }
+    .social-title em { color: var(--pink); font-style: normal; font-size: 13px; }
+    .social-sub { display: block; margin-top: 5px; color: var(--pink-light); font-family: "Cairo", sans-serif; font-size: 10px; line-height: 1.5; font-weight: 700; }
+    .arrow {
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--pink);
+      color: white;
+      font-family: Arial, sans-serif;
+      font-size: 23px;
+      line-height: 1;
+    }
+
+    .categories {
+      margin-top: 18px;
+      padding: 18px 16px 22px;
+      border-radius: 28px;
+      min-height: 480px;
+    }
+    .divider-dots { display: flex; align-items: center; justify-content: center; gap: 7px; margin: 0 auto 12px; }
+    .divider-dots span { width: 8px; height: 8px; border-radius: 50%; background: #f6d5e3; }
+    .categories h2 {
+      margin: 0;
+      color: var(--pink-light);
+      text-align: center;
+      font-size: clamp(21px, 5.8vw, 28px);
+      font-weight: 900;
+      line-height: 1.5;
+    }
+    .categories .subheading {
+      margin: 1px 0 16px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .category-list { display: grid; gap: 10px; }
+    .category-link {
+      min-height: 77px;
+      display: grid;
+      grid-template-columns: 50px minmax(0, 1fr) 37px;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 11px;
+      border: 1px solid rgba(185, 91, 133, .62);
+      border-radius: 22px;
+      background: rgba(73, 35, 56, .82);
+      transition: transform .18s ease, border-color .18s ease;
+    }
+    .category-link:hover { transform: translateY(-2px); border-color: var(--pink-light); }
+    .category-icon {
+      width: 48px;
+      height: 48px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: #5b2d48;
+      color: var(--pink);
+    }
+    .category-icon svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .category-copy { min-width: 0; }
+    .category-title { display: block; color: var(--text); font-size: 15px; line-height: 1.45; font-weight: 900; }
+    .category-title small { color: var(--pink); direction: ltr; unicode-bidi: plaintext; font-family: "Playfair Display", serif; font-size: 12px; font-weight: 700; }
+    .category-desc { display: block; margin-top: 3px; color: var(--muted); font-size: 9px; font-weight: 600; }
+    .category-number { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--pink); font-family: "Playfair Display", serif; font-weight: 800; font-size: 12px; }
+    .category-number b { width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; background: #5a2b46; font-size: 10px; }
+    .category-number small { color: var(--muted); font-size: 9px; }
+
+    footer { padding: 20px 8px 0; text-align: center; color: var(--pink-light); font-size: 10px; font-weight: 700; }
+    footer .made { direction: ltr; display: inline-block; }
+    footer .made span { color: var(--pink); }
+
+    @media (min-width: 600px) {
+      .page { padding-top: 34px; }
+      .hero { min-height: 420px; padding: 27px 28px 22px; }
+      .intro-box { font-size: 14px; }
+      .social-panel { padding: 19px 19px 20px; }
+      .social-link { min-height: 84px; }
+      .categories { padding: 22px 20px 25px; }
+      .category-link { min-height: 84px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="topline">
+      <div class="brand-mark"><span class="spark">✦</span><span>KHARAZA</span></div>
+      <div class="love">WITH LOVE <span>♥</span></div>
+    </div>
+
+    <section class="panel hero" aria-labelledby="main-title">
+      <div class="logo-circle" aria-label="K">K</div>
+      <div class="eyebrow">KHARAZA BRAND</div>
+      <h1 id="main-title">خرزة براند</h1>
+      <div class="intro-box">
+        اختاري حاجتك من قلبنا ليكي <span class="heart">♥</span><br>
+        كل قطعة معمولة بحب واهتمام، عشان توصلك حاجة تفرّحك وتكون شبهك.<br>
+        شنط وإكسسوارات ولمسات مميزة بتفاصيل بسيطة، اختاري اللي بتحبيه وخلي يومك أحلى.<br>
+        <span class="diamond">◆</span> تسوّقي من الستور
+      </div>
+      <div class="dots" aria-hidden="true"><span></span><span></span><span class="active"></span><span></span><span></span></div>
+    </section>
+
+    <section class="social-panel" aria-labelledby="social-title">
+      <h2 class="section-kicker" id="social-title">♥ تواصلينا هنا — اضغطي على أي زر ♥</h2>
+      <div class="social-list">
+        <a class="social-link" href="https://www.facebook.com/KHORZABRAND" target="_blank" rel="noopener noreferrer" aria-label="خرزة براند على Facebook">
+          <span class="social-icon"><span class="letter">f</span></span>
+          <span class="social-copy"><span class="social-title">Facebook <em>خرزة براند</em></span><span class="social-sub">Follow us on Facebook</span></span>
+          <span class="arrow" aria-hidden="true">‹</span>
+        </a>
+        <a class="social-link" href="https://www.tiktok.com/@shagan733" target="_blank" rel="noopener noreferrer" aria-label="خرزة براند على TikTok">
+          <span class="social-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3v11.2a4.2 4.2 0 1 1-3.3-4.1M14 3c.6 3.1 2.4 4.8 5.5 5.1"/></svg></span>
+          <span class="social-copy"><span class="social-title">TikTok <em>@shagan733</em></span><span class="social-sub">Watch the latest videos on TikTok</span></span>
+          <span class="arrow" aria-hidden="true">‹</span>
+        </a>
+        <a class="social-link" href="https://chat.whatsapp.com/CNSgZwjWzwCLqDdV4Bcrfo?s=cl&amp;p=a&amp;iam=2" target="_blank" rel="noopener noreferrer" aria-label="جروب خرزة براند على WhatsApp">
+          <span class="social-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5a8 8 0 0 1-11.8 7L4 20l1.4-4A8 8 0 1 1 20 11.5Z"/></svg></span>
+          <span class="social-copy"><span class="social-title">WhatsApp Group</span><span class="social-sub">Join our community</span><span class="social-sub">كل جديد أول بأول في الجروب</span></span>
+          <span class="arrow" aria-hidden="true">‹</span>
+        </a>
+        <a class="social-link" href="https://kharazastore.github.io/store/" target="_blank" rel="noopener noreferrer" aria-label="زيارة ستور خرزة براند">
+          <span class="social-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16l-1.2 12H5.2L4 8Z"/><path d="M8 9V6a4 4 0 0 1 8 0v3M9 13v2m6-2v2"/></svg></span>
+          <span class="social-copy"><span class="social-title">Kharaza Store</span><span class="social-sub">Shop our collection</span><span class="social-sub">تصفحي منتجاتنا من هنا</span></span>
+          <span class="arrow" aria-hidden="true">‹</span>
+        </a>
+      </div>
+    </section>
+
+    <section class="panel categories" aria-labelledby="categories-title">
+      <div class="divider-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+      <h2 id="categories-title">اختاري حاجتك من قلبنا ليكي</h2>
+      <p class="subheading">كل قطعة ليها حكاية — اختاري اللي شبهك</p>
+
+      <div class="category-list">
+        <a class="category-link" href="https://kharazastore.github.io/store/" target="_blank" rel="noopener noreferrer">
+          <span class="category-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9h14l-1 11H6L5 9Z"/><path d="M9 9V7a3 3 0 0 1 6 0v2M12 12v4"/></svg></span>
+          <span class="category-copy"><span class="category-title">شنط سواريه <small>Satin Bags</small></span><span class="category-desc">اختاري الشنطة اللي تكمل إطلالتك</span></span>
+          <span class="category-number"><b>1</b><small>1/5</small></span>
+        </a>
+        <a class="category-link" href="https://kharazastore.github.io/store/" target="_blank" rel="noopener noreferrer">
+          <span class="category-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v16H7zM9 4V2h6v2M9 8h6m-6 4h6m-6 4h4"/></svg></span>
+          <span class="category-copy"><span class="category-title">توزيعات مناسبات <small>Occasion Favors</small></span><span class="category-desc">تفاصيل صغيرة لمناسبات مميزة</span></span>
+          <span class="category-number"><b>2</b><small>2/5</small></span>
+        </a>
+        <a class="category-link" href="https://kharazastore.github.io/store/" target="_blank" rel="noopener noreferrer">
+          <span class="category-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8h14v12H5zM8 8V5h8v3M9 12h6m-6 4h6"/></svg></span>
+          <span class="category-copy"><span class="category-title">منظمات <small>Organizers</small></span><span class="category-desc">خلي كل حاجتك مرتبة وسهلة</span></span>
+          <span class="category-number"><b>3</b><small>3/5</small></span>
+        </a>
+        <a class="category-link" href="https://kharazastore.github.io/store/" target="_blank" rel="noopener noreferrer">
+          <span class="category-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="2"/><path d="M10 6h4m-3 12h2"/></svg></span>
+          <span class="category-copy"><span class="category-title">شنط الموبايل <small>Mobile Bags</small></span><span class="category-desc">خلي موبايلك معاكي بأناقة</span></span>
+          <span class="category-number"><b>4</b><small>4/5</small></span>
+        </a>
+        <a class="category-link" href="https://kharazastore.github.io/store/" target="_blank" rel="noopener noreferrer">
+          <span class="category-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8c-2-2-4 1-2 3l7 7 7-7c2-2 0-5-2-3l-5 5-5-5Z"/><path d="M12 5v2"/></svg></span>
+          <span class="category-copy"><span class="category-title">استرابات فون <small>Phone Straps</small></span><span class="category-desc">لمسة لطيفة لموبايلك كل يوم</span></span>
+          <span class="category-number"><b>5</b><small>5/5</small></span>
+        </a>
+      </div>
+    </section>
+
+    <footer><span class="made">♥ Made with love</span> — خرزة براند</footer>
+  </main>
+</body>
+</html>
